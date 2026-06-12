@@ -3,10 +3,34 @@ import { KundaliResult, ChartData } from '../engine/astrology';
 
 interface BirthChartProps {
   kundali: KundaliResult;
+  lang: 'en' | 'hi';
 }
 
-export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
+const TRANSLATIONS = {
+  en: {
+    title: 'Divisional Charts',
+    d1: 'Birth (D1)',
+    d9: 'Navamsa (D9)',
+    d10: 'Dashamsha (D10)',
+    chandra: 'Chandra',
+    note: 'Values in gold represent the Zodiac Sign Number (1 = Aries, 12 = Pisces).',
+    legend: 'Su: Sun | Mo: Moon | Ma: Mars | Me: Mercury | Ju: Jupiter | Ve: Venus | Sa: Saturn | Ra: Rahu | Ke: Ketu'
+  },
+  hi: {
+    title: 'विभागीय कुंडली चार्ट',
+    d1: 'जन्म कुंडली (D1)',
+    d9: 'नवांश कुंडली (D9)',
+    d10: 'दशमांश कुंडली (D10)',
+    chandra: 'चन्द्र कुंडली',
+    note: 'स्वर्ण रंग के अंक राशि संख्या दर्शाते हैं (1 = मेष, 12 = मीन)।',
+    legend: 'Su: सूर्य | Mo: चन्द्र | Ma: मंगल | Me: बुध | Ju: गुरु | Ve: शुक्र | Sa: शनि | Ra: राहु | Ke: केतु'
+  }
+};
+
+export const BirthChart: React.FC<BirthChartProps> = ({ kundali, lang }) => {
   const [activeTab, setActiveTab] = useState<'D1' | 'D9' | 'D10' | 'Chandra'>('D1');
+
+  const t = TRANSLATIONS[lang];
 
   const getChartData = (): ChartData => {
     switch (activeTab) {
@@ -22,9 +46,6 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
   const chart = getChartData();
 
   // House positioning coordinates for SVG text rendering
-  // Coordinates are tuned to place:
-  // 1. Sign Number (small, centered relative to house)
-  // 2. Planets list (spaced vertically or horizontally)
   const houseConfig: {
     [key: number]: {
       signX: number;
@@ -48,7 +69,6 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
     12: { signX: 280, signY: 70, planetsX: 300, planetsY: 95, name: '12th House' }
   };
 
-  // Convert 0-indexed sign to Vedic 1-indexed (1=Aries, 12=Pisces)
   const getVedicSignNum = (signIdx: number): number => {
     return signIdx + 1;
   };
@@ -57,7 +77,7 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: 'var(--accent-gold)' }}>✦</span> Divisional Charts
+          <span style={{ color: 'var(--accent-gold)' }}>✦</span> {t.title}
         </h3>
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: '8px' }}>
           {(['D1', 'D9', 'D10', 'Chandra'] as const).map(tab => (
@@ -77,7 +97,7 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
                 transition: 'var(--transition-smooth)'
               }}
             >
-              {tab === 'D1' ? 'Birth (D1)' : tab === 'D9' ? 'Navamsa (D9)' : tab === 'D10' ? 'Dashamsha (D10)' : 'Chandra'}
+              {tab === 'D1' ? t.d1 : tab === 'D9' ? t.d9 : tab === 'D10' ? t.d10 : t.chandra}
             </button>
           ))}
         </div>
@@ -101,16 +121,6 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
             <filter id="gold-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-            <filter id="purple-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feComponentTransfer in="blur" result="glow">
-                <feFuncA type="linear" slope="0.6"/>
-              </feComponentTransfer>
-              <feMerge>
-                <feMergeNode in="glow"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
             </filter>
           </defs>
 
@@ -171,11 +181,9 @@ export const BirthChart: React.FC<BirthChartProps> = ({ kundali }) => {
       </div>
 
       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', width: '100%' }}>
-        <p>Values in gold represent the Zodiac Sign Number (1 = Aries, 12 = Pisces).</p>
-        <p style={{ marginTop: '4px' }}>
-          <strong>Su</strong>: Sun | <strong>Mo</strong>: Moon | <strong>Ma</strong>: Mars | <strong>Me</strong>: Mercury | 
-          <strong>Ju</strong>: Jupiter | <strong>Ve</strong>: Venus | <strong>Sa</strong>: Saturn | 
-          <strong>Ra</strong>: Rahu | <strong>Ke</strong>: Ketu
+        <p>{t.note}</p>
+        <p style={{ marginTop: '4px', fontWeight: 'bold' }}>
+          {t.legend}
         </p>
       </div>
     </div>

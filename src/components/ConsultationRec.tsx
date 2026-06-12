@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Video, StopCircle, RefreshCw, Sparkles, FileText, ChevronRight, Play, Square } from 'lucide-react';
+import { Mic, Video, StopCircle, RefreshCw, Sparkles, FileText, ChevronRight } from 'lucide-react';
 
 interface RecordingSession {
   id: string;
@@ -18,9 +18,57 @@ interface RecordingSession {
 
 interface ConsultationRecProps {
   activeClientName: string;
+  lang: 'en' | 'hi';
 }
 
-export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientName }) => {
+const TRANSLATIONS = {
+  en: {
+    title: '✦ Consultation Recording Manager',
+    clientLabel: 'Active Client',
+    noClient: 'No client loaded (Default Mode)',
+    startBtn: 'Start Audio Record',
+    stopBtn: 'Stop Recording',
+    videoBtn: 'Record Video',
+    historyTitle: '✦ Recording History Logs',
+    noLogs: 'No recordings logged for this session yet.',
+    detailsTitle: 'Recording Details',
+    recordedOn: 'Recorded on',
+    durationLabel: 'Duration',
+    aiAnalyzeBtn: 'AI Session Analysis',
+    aiAnalyzing: 'Analyzing with AI...',
+    aiLogText: 'AI Model parsing speech waves and aligning recommendations with Birth Chart...',
+    aiSummaryTitle: 'AI Summary & Transcription',
+    pointsTitle: 'Key Consultation Discussion Points',
+    planTitle: 'Key Recommendations Plan',
+    gemstonesTitle: 'Gemstones Suggested',
+    altTitle: 'Alternative Remedies',
+    followUpTitle: 'Follow-up Action'
+  },
+  hi: {
+    title: '✦ परामर्श रिकॉर्डिंग प्रबंधक',
+    clientLabel: 'सक्रिय क्लाइंट',
+    noClient: 'कोई क्लाइंट लोड नहीं (डिफ़ॉल्ट मोड)',
+    startBtn: 'ऑडियो रिकॉर्डिंग शुरू करें',
+    stopBtn: 'रिकॉर्डिंग बंद करें',
+    videoBtn: 'वीडियो रिकॉर्ड करें',
+    historyTitle: '✦ रिकॉर्डिंग इतिहास लॉग',
+    noLogs: 'इस सत्र के लिए अभी तक कोई रिकॉर्डिंग लॉग नहीं है।',
+    detailsTitle: 'रिकॉर्डिंग विवरण',
+    recordedOn: 'रिकॉर्ड तिथि',
+    durationLabel: 'अवधि',
+    aiAnalyzeBtn: 'एआई सत्र विश्लेषण',
+    aiAnalyzing: 'एआई विश्लेषण जारी...',
+    aiLogText: 'एआई मॉडल आवाज तरंगों का विश्लेषण कर रहा है और कुंडली के साथ तालमेल बिठा रहा है...',
+    aiSummaryTitle: 'एआई सारांश और प्रतिलेखन',
+    pointsTitle: 'परामर्श के मुख्य चर्चा बिंदु',
+    planTitle: 'मुख्य उपाय अनुशंसा योजना',
+    gemstonesTitle: 'सुझाए गए भाग्यशाली रत्न',
+    altTitle: 'वैकल्पिक लाल किताब उपाय',
+    followUpTitle: 'अनुवर्ती कार्रवाई'
+  }
+};
+
+export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientName, lang }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [sessions, setSessions] = useState<RecordingSession[]>([]);
@@ -31,7 +79,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
   const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<number | null>(null);
   
-  // Audio waveform visualizer references
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -40,7 +87,8 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Timer effect
+  const t = TRANSLATIONS[lang];
+
   useEffect(() => {
     if (isRecording) {
       timerIntervalRef.current = window.setInterval(() => {
@@ -63,7 +111,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
     return `${m}:${s}`;
   };
 
-  // Start recording
   const startRecording = async () => {
     audioChunksRef.current = [];
     try {
@@ -85,7 +132,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
       source.connect(analyser);
       sourceRef.current = source;
 
-      // Start Media Recorder
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.ondataavailable = (e) => {
@@ -98,10 +144,9 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const blobUrl = URL.createObjectURL(audioBlob);
         
-        // Add new session
         const newSession: RecordingSession = {
           id: String(Date.now()),
-          clientName: activeClientName || 'Guest User',
+          clientName: activeClientName || (lang === 'hi' ? 'अतिथि उपयोगकर्ता' : 'Guest User'),
           date: new Date().toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           duration: formatTime(recordTime),
           blobUrl
@@ -114,29 +159,22 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
       setIsRecording(true);
       drawWaveform();
     } catch (err) {
-      console.warn('Microphone access denied or failed, falling back to simulated recording visualizer.', err);
-      // Fallback: simulated recording
+      console.warn('Microphone access denied, falling back to simulated recording visualizer.', err);
       setIsRecording(true);
       drawSimulatedWaveform();
-
-      setTimeout(() => {
-        // Mock save after simulated stop
-      }, 100);
     }
   };
 
-  // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-      // Fallback stop
       setIsRecording(false);
       const newSession: RecordingSession = {
         id: String(Date.now()),
-        clientName: activeClientName || 'Guest User',
+        clientName: activeClientName || (lang === 'hi' ? 'अतिथि उपयोगकर्ता' : 'Guest User'),
         date: new Date().toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        duration: formatTime(recordTime || 45) // mock duration
+        duration: formatTime(recordTime || 45)
       };
       setSessions(prev => [newSession, ...prev]);
       setSelectedSession(newSession);
@@ -144,7 +182,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
 
     setIsRecording(false);
 
-    // Stop streams
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
@@ -156,7 +193,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
     }
   };
 
-  // Real Waveform Draw
   const drawWaveform = () => {
     if (!canvasRef.current || !analyserRef.current || !dataArrayRef.current) return;
     const canvas = canvasRef.current;
@@ -172,7 +208,7 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
       animationFrameRef.current = requestAnimationFrame(renderFrame);
       analyser.getByteFrequencyData(dataArray as any);
 
-      ctx.fillStyle = 'rgba(5, 3, 15, 0.2)'; // semi-clear for trail
+      ctx.fillStyle = 'rgba(5, 3, 15, 0.2)';
       ctx.fillRect(0, 0, width, height);
 
       const barWidth = (width / dataArray.length) * 1.5;
@@ -181,8 +217,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
 
       for (let i = 0; i < dataArray.length; i++) {
         barHeight = dataArray[i] * 0.45;
-
-        // Gradient coloring
         const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
         gradient.addColorStop(0, 'var(--accent-purple)');
         gradient.addColorStop(1, 'var(--accent-gold)');
@@ -195,7 +229,6 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
     renderFrame();
   };
 
-  // Simulated Waveform Draw
   const drawSimulatedWaveform = () => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -229,54 +262,38 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
     renderFrame();
   };
 
-  // Run AI Summary Analysis on selected session
   const analyzeSession = (sessionId: string) => {
     setIsAnalyzing(true);
     setTimeout(() => {
+      const mockSummary = lang === 'hi' ? {
+        overview: `${selectedSession?.clientName} के साथ परामर्श सत्र। करियर में आ रहे विलंब, वित्तीय बाधाओं और स्वास्थ्य अनुकूलता पर चर्चा की गई। कुंडली में लग्न मजबूत है लेकिन पंचम भाव कमजोर है, जिससे उन्नति में देरी हो रही है।`,
+        keyPoints: [
+          'क्लाइंट ने करियर में तरक्की में अचानक आ रही रुकावटों पर चिंता जताई (शनि की दशम भाव पर दृष्टि)।',
+          'कुंडली के अनुसार, गुरु को मजबूत करने के लिए पुखराज धारण करने की सलाह दी गई।',
+          'वैकल्पिक लाल किताब उपाय: गुरुवार को चने की दाल का दान करें और बुजुर्ग पुजारियों का आशीर्वाद लें।',
+          'दशा संधि के दौरान ध्यान और प्राणायाम करने की सलाह दी गई।'
+        ],
+        gemstones: ['पीला पुखराज - ५ रत्ती तर्जनी उंगली में पहनें', 'पन्ना - ६ रत्ती कनिष्ठिका उंगली में पहनें'],
+        alternativeRemedies: ['गुरुवार का व्रत रखें', 'गायों को भीगे चने खिलाएं', 'गुरु बीज मंत्र का नित्य जाप करें'],
+        followUp: 'रत्न धारण करने के ४५ दिन बाद प्रगति और दशा उप-अवधियों के प्रभाव का विश्लेषण करने के लिए समीक्षा बैठक तय करें।'
+      } : {
+        overview: `Consultation session with ${selectedSession?.clientName}. Discussed career transitions, financial blockages, and health compatibility. The chart shows strong ascendant characteristics but a weakened 5th house ruler, causing delays in personal growth.`,
+        keyPoints: [
+          'Client expressed concerns regarding sudden delays in their career promotion (Saturn aspecting 10th house).',
+          'Recommended wearing Yellow Sapphire to strengthen Jupiter (Lagna Lord/benefic) and resolve delays.',
+          'Suggested alternative Lal Kitab remedy: donate yellow pulses and seek blessing from elderly priests on Thursdays.',
+          'Stressed the importance of meditation during Dasha Sandhi periods.'
+        ],
+        gemstones: ['Yellow Sapphire (Pukhraj) - 5 Carats on Index Finger', 'Emerald (Panna) - 6 Carats on Little Finger'],
+        alternativeRemedies: ['Thursday Fasting', 'Feed yellow chickpeas to cows', 'Recite Guru Beej Mantra daily'],
+        followUp: 'Schedule a review in 45 days after wearing the gemstone to analyze progress and changes in dasha sub-periods.'
+      };
+
       setSessions(prev => 
-        prev.map(s => {
-          if (s.id === sessionId) {
-            return {
-              ...s,
-              summary: {
-                overview: `Consultation session with ${s.clientName}. Discussed career transitions, financial blockages, and health compatibility. The chart shows strong ascendant characteristics but a weakened 5th house ruler, causing delays in personal growth.`,
-                keyPoints: [
-                  'Client expressed concerns regarding sudden delays in their career promotion (Saturn aspecting 10th house).',
-                  'Recommended wearing Yellow Sapphire to strengthen Jupiter (Lagna Lord/benefic) and resolve delays.',
-                  'Suggested alternative Lal Kitab remedy: donate yellow pulses and seek blessing from elderly priests on Thursdays.',
-                  'Stressed the importance of meditation during Dasha Sandhi periods.'
-                ],
-                gemstones: ['Yellow Sapphire (Pukhraj) - 5 Carats on Index Finger', 'Emerald (Panna) - 6 Carats on Little Finger'],
-                alternativeRemedies: ['Thursday Fasting', 'Feed yellow chickpeas to cows', 'Recite Guru Beej Mantra daily'],
-                followUp: 'Schedule a review in 45 days after wearing the gemstone to analyze progress and changes in dasha sub-periods.'
-              }
-            };
-          }
-          return s;
-        })
+        prev.map(s => s.id === sessionId ? { ...s, summary: mockSummary } : s)
       );
       setIsAnalyzing(false);
-      // Update selected session details with the new summary
-      setSelectedSession(prev => {
-        if (prev && prev.id === sessionId) {
-          return {
-            ...prev,
-            summary: {
-              overview: `Consultation session with ${prev.clientName}. Discussed career transitions, financial blockages, and health compatibility. The chart shows strong ascendant characteristics but a weakened 5th house ruler, causing delays in personal growth.`,
-              keyPoints: [
-                'Client expressed concerns regarding sudden delays in their career promotion (Saturn aspecting 10th house).',
-                'Recommended wearing Yellow Sapphire to strengthen Jupiter (Lagna Lord/benefic) and resolve delays.',
-                'Suggested alternative Lal Kitab remedy: donate yellow pulses and seek blessing from elderly priests on Thursdays.',
-                'Stressed the importance of meditation during Dasha Sandhi periods.'
-              ],
-              gemstones: ['Yellow Sapphire (Pukhraj) - 5 Carats on Index Finger', 'Emerald (Panna) - 6 Carats on Little Finger'],
-              alternativeRemedies: ['Thursday Fasting', 'Feed yellow chickpeas to cows', 'Recite Guru Beej Mantra daily'],
-              followUp: 'Schedule a review in 45 days after wearing the gemstone to analyze progress and changes in dasha sub-periods.'
-            }
-          };
-        }
-        return prev;
-      });
+      setSelectedSession(prev => prev && prev.id === sessionId ? { ...prev, summary: mockSummary } : prev);
     }, 2000);
   };
 
@@ -286,12 +303,12 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
         {/* Recording Console */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h2 style={{ fontSize: '1.4rem', color: 'var(--accent-gold)' }}>
-            ✦ Consultation Recording Manager
+            {t.title}
           </h2>
 
           <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Active Client: <strong>{activeClientName || 'No client loaded (Default Mode)'}</strong>
+              {t.clientLabel}: <strong>{activeClientName || t.noClient}</strong>
             </span>
           </div>
 
@@ -313,15 +330,15 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             {!isRecording ? (
               <button onClick={startRecording} className="btn btn-primary">
-                <Mic size={16} /> Start Audio Record
+                <Mic size={16} /> {t.startBtn}
               </button>
             ) : (
               <button onClick={stopRecording} className="btn btn-danger">
-                <StopCircle size={16} /> Stop Recording
+                <StopCircle size={16} /> {t.stopBtn}
               </button>
             )}
             <button className="btn btn-secondary" disabled>
-              <Video size={16} /> Record Video
+              <Video size={16} /> {t.videoBtn}
             </button>
           </div>
         </div>
@@ -329,13 +346,13 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
         {/* Sessions list */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-purple)' }}>
-            ✦ Recording History Logs
+            {t.historyTitle}
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
             {sessions.length === 0 ? (
               <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px' }}>
-                No recordings logged for this session yet.
+                {t.noLogs}
               </div>
             ) : (
               sessions.map(s => (
@@ -375,10 +392,10 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
             <div>
               <h3 style={{ fontSize: '1.3rem', color: '#fff' }}>
-                Recording Details: {selectedSession.clientName}
+                {t.detailsTitle}: {selectedSession.clientName}
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Recorded on {selectedSession.date} • Duration: {selectedSession.duration}
+                {t.recordedOn} {selectedSession.date} • {t.durationLabel}: {selectedSession.duration}
               </p>
             </div>
 
@@ -393,7 +410,7 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
                   className="btn btn-primary"
                   disabled={isAnalyzing}
                 >
-                  <Sparkles size={16} /> {isAnalyzing ? 'Analyzing with AI...' : 'AI Session Analysis'}
+                  <Sparkles size={16} /> {isAnalyzing ? t.aiAnalyzing : t.aiAnalyzeBtn}
                 </button>
               )}
             </div>
@@ -403,14 +420,8 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
             <div style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
               <RefreshCw size={36} className="no-print" style={{ color: 'var(--accent-gold)', animation: 'spin 2s linear infinite' }} />
               <p style={{ fontSize: '1rem', color: 'var(--accent-gold)', fontFamily: 'var(--font-title)', fontWeight: 'bold' }}>
-                AI Model parsing speech waves and aligning recommendations with Birth Chart...
+                {t.aiLogText}
               </p>
-              <style>{`
-                @keyframes spin {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-              `}</style>
             </div>
           )}
 
@@ -419,13 +430,13 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
               {/* Overview Transcript Summary */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <h4 style={{ fontSize: '1.1rem', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={16} /> AI Summary & Transcription
+                  <FileText size={16} /> {t.aiSummaryTitle}
                 </h4>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '10px', lineHeight: '1.6' }}>
                   {selectedSession.summary.overview}
                 </p>
 
-                <h4 style={{ fontSize: '1rem', color: '#fff', marginTop: '10px' }}>Key Consultation Discussion Points</h4>
+                <h4 style={{ fontSize: '1rem', color: '#fff', marginTop: '10px' }}>{t.pointsTitle}</h4>
                 <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                   {selectedSession.summary.keyPoints.map((point, idx) => (
                     <li key={idx}>{point}</li>
@@ -436,12 +447,12 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
               {/* Action Plan */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <h4 style={{ fontSize: '1.1rem', color: 'var(--accent-teal)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={16} /> Key Recommendations Plan
+                  <Sparkles size={16} /> {t.planTitle}
                 </h4>
 
                 <div style={{ background: 'rgba(26,188,156,0.05)', border: '1px solid rgba(26,188,156,0.15)', padding: '16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div>
-                    <h5 style={{ fontSize: '0.9rem', color: 'var(--accent-teal)', fontWeight: 'bold' }}>Gemstones Suggested</h5>
+                    <h5 style={{ fontSize: '0.9rem', color: 'var(--accent-teal)', fontWeight: 'bold' }}>{t.gemstonesTitle}</h5>
                     <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '4px' }}>
                       {selectedSession.summary.gemstones.map((g, idx) => (
                         <li key={idx}>• {g}</li>
@@ -450,7 +461,7 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
                   </div>
 
                   <div>
-                    <h5 style={{ fontSize: '0.9rem', color: 'var(--accent-gold)', fontWeight: 'bold' }}>Alternative Remedies</h5>
+                    <h5 style={{ fontSize: '0.9rem', color: 'var(--accent-gold)', fontWeight: 'bold' }}>{t.altTitle}</h5>
                     <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '4px' }}>
                       {selectedSession.summary.alternativeRemedies.map((r, idx) => (
                         <li key={idx}>• {r}</li>
@@ -459,7 +470,7 @@ export const ConsultationRec: React.FC<ConsultationRecProps> = ({ activeClientNa
                   </div>
 
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '4px' }}>
-                    <h5 style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 'bold' }}>Follow-up Action</h5>
+                    <h5 style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 'bold' }}>{t.followUpTitle}</h5>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       {selectedSession.summary.followUp}
                     </p>

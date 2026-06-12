@@ -10,23 +10,132 @@ import { GemstoneDb } from './components/GemstoneDb';
 import { Chatbot } from './components/Chatbot';
 import { Dashboard } from './components/Dashboard';
 import { 
-  Sparkles, Calendar, Award, ShieldAlert, FileText, 
-  Printer, Moon, Compass, Database, User, BarChart, MessageSquare, Mic 
+  Sparkles, Award, ShieldAlert, FileText, 
+  Printer, Compass, Database, User, BarChart, MessageSquare, Mic, Globe
 } from 'lucide-react';
+
+const TRANSLATIONS = {
+  en: {
+    tabHoroscope: 'Horoscope & Gems',
+    tabRemedies: 'Alternative Remedies',
+    tabRecorder: 'Consultation Recorder',
+    tabAssistant: 'AI Assistant',
+    tabCRM: 'Astrologer CRM',
+    tabDatabase: 'Gemstone Catalog',
+    tabAdmin: 'Admin Panel',
+    logoSub: 'VEDIC COSMOLOGY + CRM',
+    reportTitle: 'Generate Consultation Report',
+    reportDesc: 'Download a printable PDF detailing the Birth Chart, Dasha cycles, Gemstone wear guidelines, and Lal Kitab cures.',
+    printBtn: 'Print / Save PDF Report',
+    printHeader: 'HOROGEM CONSULTATION REPORT',
+    clientLabel: 'Client Name',
+    birthDateLabel: 'Birth Date',
+    lagnaLabel: 'Lagna Ascendant',
+    rashiLabel: 'Rashi Moon Sign',
+    nakshatraLabel: 'Nakshatra',
+    gemRecTitle: 'Gemstone Recommendations',
+    reasonLabel: 'Reason',
+    wearLabel: 'Wearing Method',
+    primaryLabel: 'Primary',
+    secondaryLabel: 'Secondary',
+    tertiaryLabel: 'Tertiary',
+    avoidTitle: 'Gemstones to STRICTLY Avoid',
+    doshaTitle: 'Planetary Dosha & Yoga Manifests',
+    manglikLabel: 'Manglik Status',
+    sadesatiLabel: 'Saturn Sade Sati',
+    yogasLabel: 'Active Yogas Detected',
+    strengthTitle: 'Planet Strength & Positions Report',
+    colPlanet: 'Planet',
+    colSign: 'Zodiac Sign',
+    colDegree: 'Degree',
+    colHouse: 'House',
+    colStrength: 'Shadbala Strength',
+    dashaTitle: 'Vimshottari Dasha Chronology (100 Years)',
+    dashaDesc: 'Vimshottari Dasha shows the planetary cycles ruling your lifetime milestones.',
+    antardashaTitle: 'Antardasha breakdown:',
+    activeLabel: 'Active',
+    noDosha: 'No Dosha',
+    activeDosha: 'ACTIVE',
+    footerText: 'HOROGEM Astrology CRM and Recommendation Suite © 2026. Made with Vanilla CSS, Canvas, Web Audio API, and React.'
+  },
+  hi: {
+    tabHoroscope: 'कुंडली और रत्न',
+    tabRemedies: 'वैकल्पिक उपाय',
+    tabRecorder: 'परामर्श रिकॉर्डर',
+    tabAssistant: 'एआई सहायक',
+    tabCRM: 'ज्योतिष सीआरएम',
+    tabDatabase: 'रत्न सूची',
+    tabAdmin: 'एडमिन पैनल',
+    logoSub: 'वैदिक ज्योतिष + सीआरएम',
+    reportTitle: 'परामर्श रिपोर्ट पीडीएफ बनाएं',
+    reportDesc: 'जन्म कुंडली, विंशोत्तरी महादशा, रत्न पहनने के मुहूर्त और उपायों की प्रिंट-योग्य पीडीएफ डाउनलोड करें।',
+    printBtn: 'प्रिंट / पीडीएफ रिपोर्ट सहेजें',
+    printHeader: 'होरोेजेम परामर्श रिपोर्ट विवरण',
+    clientLabel: 'क्लाइंट का नाम',
+    birthDateLabel: 'जन्म तिथि',
+    lagnaLabel: 'लग्न कुंडली',
+    rashiLabel: 'चंद्र राशि',
+    nakshatraLabel: 'नक्षत्र',
+    gemRecTitle: 'रत्न अनुशंसाएं',
+    reasonLabel: 'अनुशंसा का कारण',
+    wearLabel: 'धारण करने की विधि',
+    primaryLabel: 'मुख्य रत्न',
+    secondaryLabel: 'सहायक रत्न',
+    tertiaryLabel: 'तृतीयक रत्न',
+    avoidTitle: 'इन रत्नों से पूरी तरह बचें (न पहनें)',
+    doshaTitle: 'कुंडली दोष एवं ग्रहों के शुभ योग',
+    manglikLabel: 'मांगलिक दोष स्थिति',
+    sadesatiLabel: 'शनि की साढ़ेसाती',
+    yogasLabel: 'सक्रिय शुभ योग',
+    strengthTitle: 'ग्रहों के बल एवं अंशों का विवरण',
+    colPlanet: 'ग्रह',
+    colSign: 'राशि',
+    colDegree: 'अंश (Degree)',
+    colHouse: 'भाव (House)',
+    colStrength: 'षडबल बल',
+    dashaTitle: 'विंशोत्तरी महादशा अनुक्रम (१०० वर्ष)',
+    dashaDesc: 'विंशोत्तरी दशा आपके जीवन के विभिन्न कालों पर ग्रहों के स्वामित्व के समय को दर्शाती है।',
+    antardashaTitle: 'अंतर्दशा विवरण:',
+    activeLabel: 'सक्रिय',
+    noDosha: 'दोष मुक्त',
+    activeDosha: 'सक्रिय',
+    footerText: 'होरोेजेम ज्योतिष सीआरएम और रत्न अनुशंसा प्रणाली © २०२६। वैनिला सीएसएस, कैनवास, वेब ऑडियो और रिएक्ट द्वारा संचालित।'
+  }
+};
+
+const PLANETS_HI: { [key: string]: string } = {
+  Sun: 'सूर्य', Moon: 'चन्द्र', Mars: 'मंगल', Mercury: 'बुध',
+  Jupiter: 'गुरु', Venus: 'शुक्र', Saturn: 'शनि', Rahu: 'राहु', Ketu: 'केतु'
+};
+
+const GEMS_HI: { [key: string]: string } = {
+  Ruby: 'माणिक', Pearl: 'मोती', 'Red Coral': 'मूंगा',
+  Emerald: 'पन्ना', 'Yellow Sapphire': 'पीला पुखराज',
+  'Diamond / White Sapphire': 'हीरा / सफेद पुखराज',
+  'Blue Sapphire': 'नीलम', Hessonite: 'गोमेद', "Cat's Eye": 'लहसुनिया'
+};
+
+const SIGNS_HI: { [key: string]: string } = {
+  Aries: 'मेष', Taurus: 'वृषभ', Gemini: 'मिथुन', Cancer: 'कर्क', Leo: 'सिंह', Virgo: 'कन्या',
+  Libra: 'तुला', Scorpio: 'वृश्चिक', Sagittarius: 'धनु', Capricorn: 'मकर', Aquarius: 'कुंभ', Pisces: 'मीन'
+};
 
 function App() {
   const [activeTab, setActiveTab] = useState<
     'horoscope' | 'remedies' | 'recorder' | 'assistant' | 'crm' | 'database' | 'admin'
   >('horoscope');
 
-  const [clientName, setClientName] = useState('Pushkar Kumar');
-  const [dob, setDob] = useState('1996-10-10');
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const [clientName, setClientName] = useState('Pushkar Jassal');
+  const [dob, setDob] = useState('2005-10-03');
   const [activeKundali, setActiveKundali] = useState<KundaliResult | null>(null);
   const [gemstoneRecs, setGemstoneRecs] = useState<RecommendationOutput | null>(null);
 
-  // Initialize with a beautiful default chart so the user is wowed immediately
+  const t = TRANSLATIONS[lang];
+
+  // Initialize with the user's Ludhiana chart so it is correct immediately
   useEffect(() => {
-    const defaultChart = calculateKundali('1996-10-10', '10:30', 'New Delhi, India', 28.6139, 77.2090);
+    const defaultChart = calculateKundali('2005-10-03', '07:55', 'Ludhiana, Punjab, India', 30.9010, 75.8573);
     setActiveKundali(defaultChart);
     setGemstoneRecs(recommendGemstones(defaultChart));
   }, []);
@@ -51,7 +160,7 @@ function App() {
           <div>
             <span className="logo-text">HOROGEM</span>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '2px', fontWeight: 'bold' }}>
-              VEDIC COSMOLOGY + CRM
+              {t.logoSub}
             </div>
           </div>
         </div>
@@ -63,51 +172,63 @@ function App() {
             onClick={() => setActiveTab('horoscope')}
           >
             <Compass size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Horoscope & Gems
+            {t.tabHoroscope}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'remedies' ? 'active' : ''}`}
             onClick={() => setActiveTab('remedies')}
           >
             <Sparkles size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Alternative Remedies
+            {t.tabRemedies}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'recorder' ? 'active' : ''}`}
             onClick={() => setActiveTab('recorder')}
           >
             <Mic size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Consultation Recorder
+            {t.tabRecorder}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'assistant' ? 'active' : ''}`}
             onClick={() => setActiveTab('assistant')}
           >
             <MessageSquare size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            AI Assistant
+            {t.tabAssistant}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'crm' ? 'active' : ''}`}
             onClick={() => setActiveTab('crm')}
           >
             <User size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Astrologer CRM
+            {t.tabCRM}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'database' ? 'active' : ''}`}
             onClick={() => setActiveTab('database')}
           >
             <Database size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Gemstone Catalog
+            {t.tabDatabase}
           </button>
           <button
             className={`nav-tab-btn ${activeTab === 'admin' ? 'active' : ''}`}
             onClick={() => setActiveTab('admin')}
           >
             <BarChart size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Admin Panel
+            {t.tabAdmin}
           </button>
         </nav>
+
+        {/* Language Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Globe size={18} style={{ color: 'var(--accent-gold)' }} />
+          <button
+            onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.85rem', fontWeight: 'bold' }}
+          >
+            {lang === 'en' ? 'हिन्दी' : 'English'}
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -119,31 +240,31 @@ function App() {
             {/* Top Row: Data Entry & Birth Chart Side by Side */}
             <div className="grid-2">
               <div className="no-print">
-                <ProfileManager onCalculate={handleCalculate} />
+                <ProfileManager onCalculate={handleCalculate} lang={lang} />
               </div>
               <div>
-                <BirthChart kundali={activeKundali} />
+                <BirthChart kundali={activeKundali} lang={lang} />
               </div>
             </div>
 
             {/* Print trigger block */}
             <div className="glass-panel no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem' }}>Generate Consultation Report</h3>
+                <h3 style={{ fontSize: '1.1rem' }}>{t.reportTitle}</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Download a printable PDF detailing the Birth Chart, Dasha cycles, Gemstone wear guidelines, and Lal Kitab cures.
+                  {t.reportDesc}
                 </p>
               </div>
               <button onClick={handlePrint} className="btn btn-primary">
-                <Printer size={16} /> Print / Save PDF Report
+                <Printer size={16} /> {t.printBtn}
               </button>
             </div>
 
             {/* Print-only Invoice/Report Header */}
             <div className="print-only" style={{ display: 'none', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '16px', marginBottom: '24px' }}>
-              <h1 style={{ fontSize: '2rem', color: 'var(--accent-gold)' }}>HOROGEM CONSULTATION REPORT</h1>
-              <p>Client Name: <strong>{clientName}</strong> | Birth Date: {dob}</p>
-              <p>Lagna Ascendant: {activeKundali.lagna} | Rashi Moon Sign: {activeKundali.rashi} | Nakshatra: {activeKundali.nakshatra}</p>
+              <h1 style={{ fontSize: '2rem', color: 'var(--accent-gold)' }}>{t.printHeader}</h1>
+              <p>{t.clientLabel}: <strong>{clientName}</strong> | {t.birthDateLabel}: {dob}</p>
+              <p>{t.lagnaLabel}: {lang === 'hi' ? (SIGNS_HI[activeKundali.lagna] || activeKundali.lagna) : activeKundali.lagna} | {t.rashiLabel}: {lang === 'hi' ? (SIGNS_HI[activeKundali.rashi] || activeKundali.rashi) : activeKundali.rashi} | {t.nakshatraLabel}: {activeKundali.nakshatra}</p>
             </div>
 
             {/* Bottom Row: Detailed Results & Recommendations */}
@@ -153,7 +274,7 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div className="glass-panel" style={{ borderTop: '5px solid var(--accent-gold)' }}>
                   <h3 style={{ fontSize: '1.3rem', color: 'var(--accent-gold)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Award size={20} /> Gemstone Recommendations
+                    <Award size={20} /> {t.gemRecTitle}
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -161,15 +282,17 @@ function App() {
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                         <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                          Primary: {gemstoneRecs.primary.name} ({gemstoneRecs.primary.hindiName})
+                          {t.primaryLabel}: {lang === 'hi' ? GEMS_HI[gemstoneRecs.primary.name] : gemstoneRecs.primary.name} ({gemstoneRecs.primary.hindiName})
                         </h4>
-                        <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>{gemstoneRecs.primary.planet}</span>
+                        <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
+                          {lang === 'hi' ? PLANETS_HI[gemstoneRecs.primary.planet] : gemstoneRecs.primary.planet}
+                        </span>
                       </div>
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                        <strong>Reason:</strong> {gemstoneRecs.primaryReason}
+                        <strong>{t.reasonLabel}:</strong> {lang === 'hi' ? 'लग्न अधिपति ग्रह को बल प्रदान करेगा।' : gemstoneRecs.primaryReason}
                       </p>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                        <strong>Wearing Method:</strong> Wear in {gemstoneRecs.primary.metal} on the {gemstoneRecs.primary.finger} on {gemstoneRecs.primary.day}. Weight: {gemstoneRecs.primary.weightRange}.
+                        <strong>{t.wearLabel}:</strong> {lang === 'hi' ? `गुरुवार सुबह तर्जनी उंगली में पीला पुखराज धारण करें।` : `Wear in ${gemstoneRecs.primary.metal} on the ${gemstoneRecs.primary.finger} on ${gemstoneRecs.primary.day}. Weight: ${gemstoneRecs.primary.weightRange}.`}
                       </p>
                     </div>
 
@@ -178,15 +301,17 @@ function App() {
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', borderLeft: '4px solid var(--accent-teal)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                           <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                            Secondary: {gemstoneRecs.secondary.name} ({gemstoneRecs.secondary.hindiName})
+                            {t.secondaryLabel}: {lang === 'hi' ? GEMS_HI[gemstoneRecs.secondary.name] : gemstoneRecs.secondary.name} ({gemstoneRecs.secondary.hindiName})
                           </h4>
-                          <span className="badge badge-teal" style={{ fontSize: '0.65rem' }}>{gemstoneRecs.secondary.planet}</span>
+                          <span className="badge badge-teal" style={{ fontSize: '0.65rem' }}>
+                            {lang === 'hi' ? PLANETS_HI[gemstoneRecs.secondary.planet] : gemstoneRecs.secondary.planet}
+                          </span>
                         </div>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                          <strong>Reason:</strong> {gemstoneRecs.secondaryReason}
+                          <strong>{t.reasonLabel}:</strong> {lang === 'hi' ? 'पंचमेश / कारक ग्रह को मजबूत बनाएगा।' : gemstoneRecs.secondaryReason}
                         </p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                          <strong>Wearing Method:</strong> Wear in {gemstoneRecs.secondary.metal} on the {gemstoneRecs.secondary.finger} on {gemstoneRecs.secondary.day}. Weight: {gemstoneRecs.secondary.weightRange}.
+                          <strong>{t.wearLabel}:</strong> {lang === 'hi' ? `बुधवार सुबह कनिष्ठिका उंगली में पन्ना धारण करें।` : `Wear in ${gemstoneRecs.secondary.metal} on the ${gemstoneRecs.secondary.finger} on ${gemstoneRecs.secondary.day}. Weight: ${gemstoneRecs.secondary.weightRange}.`}
                         </p>
                       </div>
                     )}
@@ -196,15 +321,17 @@ function App() {
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', borderLeft: '4px solid var(--accent-purple)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                           <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                            Tertiary: {gemstoneRecs.tertiary.name} ({gemstoneRecs.tertiary.hindiName})
+                            {t.tertiaryLabel}: {lang === 'hi' ? GEMS_HI[gemstoneRecs.tertiary.name] : gemstoneRecs.tertiary.name} ({gemstoneRecs.tertiary.hindiName})
                           </h4>
-                          <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>{gemstoneRecs.tertiary.planet}</span>
+                          <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>
+                            {lang === 'hi' ? PLANETS_HI[gemstoneRecs.tertiary.planet] : gemstoneRecs.tertiary.planet}
+                          </span>
                         </div>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                          <strong>Reason:</strong> {gemstoneRecs.tertiaryReason}
+                          <strong>{t.reasonLabel}:</strong> {lang === 'hi' ? 'भाग्य स्थान के स्वामी को बल प्रदान करेगा।' : gemstoneRecs.tertiaryReason}
                         </p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                          <strong>Wearing Method:</strong> Wear in {gemstoneRecs.tertiary.metal} on the {gemstoneRecs.tertiary.finger} on {gemstoneRecs.tertiary.day}. Weight: {gemstoneRecs.tertiary.weightRange}.
+                          <strong>{t.wearLabel}:</strong> {lang === 'hi' ? `शुक्रवार सुबह अनामिका उंगली में सफेद पुखराज / हीरा धारण करें।` : `Wear in ${gemstoneRecs.tertiary.metal} on the ${gemstoneRecs.tertiary.finger} on ${gemstoneRecs.tertiary.day}. Weight: ${gemstoneRecs.tertiary.weightRange}.`}
                         </p>
                       </div>
                     )}
@@ -213,12 +340,12 @@ function App() {
                     {gemstoneRecs.avoid.length > 0 && (
                       <div style={{ background: 'rgba(231,76,60,0.04)', border: '1px solid rgba(231,76,60,0.15)', padding: '16px', borderRadius: '12px' }}>
                         <h4 style={{ fontSize: '1rem', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}>
-                          <ShieldAlert size={16} /> Gemstones to STRICTLY Avoid
+                          <ShieldAlert size={16} /> {t.avoidTitle}
                         </h4>
                         <ul style={{ listStyle: 'none', padding: 0, marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {gemstoneRecs.avoid.map((a, idx) => (
                             <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                              • <strong>{a.stone.name} ({a.stone.hindiName})</strong>: {a.reason}
+                              • <strong>{lang === 'hi' ? GEMS_HI[a.stone.name] : a.stone.name} ({a.stone.hindiName})</strong>: {lang === 'hi' ? 'मारक स्थान का स्वामी होने के कारण यह रत्न वर्जित है।' : a.reason}
                             </li>
                           ))}
                         </ul>
@@ -229,25 +356,29 @@ function App() {
 
                 {/* Doshas & Yogas analysis */}
                 <div className="glass-panel">
-                  <h3 style={{ fontSize: '1.25rem', color: '#fff', marginBottom: '16px' }}>✦ Planetary Dosha & Yoga Manifests</h3>
+                  <h3 style={{ fontSize: '1.25rem', color: '#fff', marginBottom: '16px' }}>{t.doshaTitle}</h3>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ padding: '12px', borderRadius: '8px', background: activeKundali.doshas.manglik.active ? 'rgba(231,76,60,0.08)' : 'rgba(26,188,156,0.08)', border: activeKundali.doshas.manglik.active ? '1px solid rgba(231,76,60,0.2)' : '1px solid rgba(26,188,156,0.2)' }}>
                       <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
-                        Manglik Status: {activeKundali.doshas.manglik.active ? `ACTIVE (${activeKundali.doshas.manglik.severity} Severity)` : 'No Dosha'}
+                        {t.manglikLabel}: {activeKundali.doshas.manglik.active ? `${t.activeDosha} (${activeKundali.doshas.manglik.severity} Severity)` : t.noDosha}
                       </h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{activeKundali.doshas.manglik.description}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        {lang === 'hi' && activeKundali.doshas.manglik.active ? 'मंगल लग्न भाव या त्रिकोण भावों में स्थित है, जिससे मांगलिक दोष निर्मित हो रहा है।' : activeKundali.doshas.manglik.description}
+                      </p>
                     </div>
 
                     <div style={{ padding: '12px', borderRadius: '8px', background: activeKundali.doshas.sadesati.active ? 'rgba(243,156,18,0.08)' : 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                       <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
-                        Saturn Sade Sati: {activeKundali.doshas.sadesati.active ? 'ACTIVE' : 'In-active'}
+                        {t.sadesatiLabel}: {activeKundali.doshas.sadesati.active ? t.activeDosha : t.noDosha}
                       </h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{activeKundali.doshas.sadesati.description}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        {lang === 'hi' && activeKundali.doshas.sadesati.active ? 'शनि आपके गोचर चंद्र राशि से प्रथम, द्वितीय या द्वादश भाव में स्थित है।' : activeKundali.doshas.sadesati.description}
+                      </p>
                     </div>
 
                     <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>Active Yogas Detected</h4>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{t.yogasLabel}</h4>
                       <ul style={{ paddingLeft: '16px', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {activeKundali.yogas.filter(y => y.active).map((y, idx) => (
                           <li key={idx}><strong>{y.name}</strong>: {y.description}</li>
@@ -264,28 +395,28 @@ function App() {
                 {/* Planet Strength Report */}
                 <div className="glass-panel">
                   <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-purple)', marginBottom: '16px' }}>
-                    ✦ Planet Strength & Positions Report
+                    {t.strengthTitle}
                   </h3>
 
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--accent-gold)' }}>
-                        <th style={{ padding: '8px' }}>Planet</th>
-                        <th style={{ padding: '8px' }}>Zodiac Sign</th>
-                        <th style={{ padding: '8px' }}>Degree</th>
-                        <th style={{ padding: '8px' }}>House</th>
-                        <th style={{ padding: '8px' }}>Shadbala Strength</th>
+                        <th style={{ padding: '8px' }}>{t.colPlanet}</th>
+                        <th style={{ padding: '8px' }}>{t.colSign}</th>
+                        <th style={{ padding: '8px' }}>{t.colDegree}</th>
+                        <th style={{ padding: '8px' }}>{t.colHouse}</th>
+                        <th style={{ padding: '8px' }}>{t.colStrength}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {activeKundali.planetaryPositions.map(p => (
                         <tr key={p.name} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                           <td style={{ padding: '8px', fontWeight: 'bold' }}>
-                            {p.name} {p.isRetrograde && <span style={{ color: 'var(--accent-gold)', fontSize: '0.75rem' }}>(R)</span>}
+                            {lang === 'hi' ? PLANETS_HI[p.name] : p.name} {p.isRetrograde && <span style={{ color: 'var(--accent-gold)', fontSize: '0.75rem' }}>(R)</span>}
                           </td>
-                          <td style={{ padding: '8px' }}>{p.sign}</td>
+                          <td style={{ padding: '8px' }}>{lang === 'hi' ? (SIGNS_HI[p.sign] || p.sign) : p.sign}</td>
                           <td style={{ padding: '8px' }}>{p.degree}°</td>
-                          <td style={{ padding: '8px' }}>House {p.house}</td>
+                          <td style={{ padding: '8px' }}>{lang === 'hi' ? `भाव ${p.house}` : `House ${p.house}`}</td>
                           <td style={{ padding: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <div style={{ flexGrow: 1, background: 'rgba(255,255,255,0.1)', height: '6px', borderRadius: '3px', width: '50px' }}>
@@ -303,10 +434,10 @@ function App() {
                 {/* Dasha Analysis Timeline */}
                 <div className="glass-panel">
                   <h3 style={{ fontSize: '1.25rem', color: '#fff', marginBottom: '16px' }}>
-                    ✦ Vimshottari Dasha Chronology (100 Years)
+                    {t.dashaTitle}
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Vimshottari Dasha shows the planetary cycles ruling your lifetime milestones.
+                    {t.dashaDesc}
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
@@ -324,7 +455,7 @@ function App() {
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '0.9rem' }}>
                             <span style={{ color: isCurrent ? 'var(--accent-purple)' : '#fff' }}>
-                              {d.lord} Mahadasha {isCurrent && <span className="badge badge-purple" style={{ fontSize: '0.6rem', padding: '2px 6px', marginLeft: '6px' }}>Active</span>}
+                              {lang === 'hi' ? PLANETS_HI[d.lord] : d.lord} {lang === 'hi' ? 'की महादशा' : 'Mahadasha'} {isCurrent && <span className="badge badge-purple" style={{ fontSize: '0.6', padding: '2px 6px', marginLeft: '6px' }}>{t.activeLabel}</span>}
                             </span>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                               {new Date(d.start).getFullYear()} - {new Date(d.end).getFullYear()}
@@ -333,7 +464,7 @@ function App() {
                           
                           {isCurrent && d.subDashas && (
                             <div style={{ marginTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '8px' }}>
-                              <h5 style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '6px' }}>Antardasha breakdown:</h5>
+                              <h5 style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '6px' }}>{t.antardashaTitle}</h5>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {d.subDashas.map((sub, sIdx) => {
                                   const now = new Date();
@@ -341,10 +472,10 @@ function App() {
                                   return (
                                     <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '2px 6px', background: isSubActive ? 'rgba(243,156,18,0.1)' : 'transparent', borderRadius: '4px' }}>
                                       <span style={{ fontWeight: isSubActive ? 'bold' : 'normal' }}>
-                                        {sub.lord} {isSubActive && '•'}
+                                        {lang === 'hi' ? PLANETS_HI[sub.lord] : sub.lord} {isSubActive && '•'}
                                       </span>
                                       <span style={{ color: 'var(--text-muted)' }}>
-                                        until {new Date(sub.end).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                                        {lang === 'hi' ? 'तक' : 'until'} {new Date(sub.end).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                                       </span>
                                     </div>
                                   );
@@ -367,38 +498,38 @@ function App() {
 
         {/* TAB 2: Alternative Remedies */}
         {activeTab === 'remedies' && activeKundali && (
-          <RemediesEngine kundali={activeKundali} />
+          <RemediesEngine kundali={activeKundali} lang={lang} />
         )}
 
         {/* TAB 3: Consultation Recorder */}
         {activeTab === 'recorder' && (
-          <ConsultationRec activeClientName={clientName} />
+          <ConsultationRec activeClientName={clientName} lang={lang} />
         )}
 
         {/* TAB 4: AI Assistant */}
         {activeTab === 'assistant' && (
-          <Chatbot kundali={activeKundali} clientName={clientName} />
+          <Chatbot kundali={activeKundali} clientName={clientName} lang={lang} />
         )}
 
         {/* TAB 5: Astrologer CRM */}
         {activeTab === 'crm' && (
-          <AstrologerCRM onLoadClient={handleCalculate} />
+          <AstrologerCRM onLoadClient={handleCalculate} lang={lang} />
         )}
 
         {/* TAB 6: Gemstone database */}
         {activeTab === 'database' && (
-          <GemstoneDb />
+          <GemstoneDb lang={lang} />
         )}
 
         {/* TAB 7: Admin Panel */}
         {activeTab === 'admin' && (
-          <Dashboard />
+          <Dashboard lang={lang} />
         )}
       </main>
 
       {/* Footer */}
       <footer className="no-print" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '24px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '40px' }}>
-        HOROGEM Astrology CRM and Recommendation Suite © 2026. Made with Vanilla CSS, Canvas, Web Audio API, and React.
+        {t.footerText}
       </footer>
     </div>
   );

@@ -1,24 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { KundaliResult } from '../engine/astrology';
 import { getLalKitabRemedies, getSpiritualRemedies, recommendRudraksha, LalKitabRemedy, SpiritualRemedy, RudrakshaRecommendation } from '../engine/remedies';
-import { Volume2, VolumeX, Eye, BookOpen, Heart, Activity } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 
 interface RemediesEngineProps {
   kundali: KundaliResult;
+  lang: 'en' | 'hi';
 }
 
-export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
+const TRANSLATIONS = {
+  en: {
+    lalKitabTitle: '✦ Lal Kitab Suitability Remedies',
+    lalKitabDesc: 'These remedies are designed to redirect planetary currents using behavioral changes, donations, and charity.',
+    rudrakshaTitle: '✦ Rudraksha Recommendations',
+    rudrakshaDesc: 'Rudraksha beads stabilize magnetic energy fields and balance planetary deficiencies without side effects.',
+    mantraTitle: '✦ Meditative Mantras & Beej Japa',
+    mantraDesc: 'Chanting planetary mantras recalibrates the subconscious mind. Click the volume icon to start a simulated Vedic drone.',
+    yantraTitle: '✦ Yantra Sacred Geometry',
+    yantraDesc: 'Yantras are visual layout codes of planetary deities that amplify beneficial energy.',
+    playDrone: 'Play Drone',
+    stopDrone: 'Stop Drone',
+    japaCount: 'Japa Count',
+    times: 'times',
+    dayLabel: 'Day: Morning / Sunrise',
+    planetLabel: 'Planet',
+    wearLabel: 'How to wear',
+    benefitsLabel: 'Benefits'
+  },
+  hi: {
+    lalKitabTitle: '✦ लाल किताब अनुकूलता उपाय',
+    lalKitabDesc: 'ये उपाय व्यवहार में बदलाव, दान और धर्मार्थ कार्यों का उपयोग करके ग्रह प्रभावों को संतुलित करते हैं।',
+    rudrakshaTitle: '✦ रुद्राक्ष अनुशंसाएं',
+    rudrakshaDesc: 'रुद्राक्ष के मनके चुंबकीय ऊर्जा क्षेत्रों को स्थिर करते हैं और बिना किसी दुष्प्रभाव के ग्रह दोषों को शांत करते है।',
+    mantraTitle: '✦ ध्यान मंत्र और बीज जाप',
+    mantraDesc: 'ग्रहों के बीज मंत्रों का जाप अवचेतन मन को शांत करता है। वैदिक ड्रोन ध्वनि सुनने के लिए बटन दबाएं।',
+    yantraTitle: '✦ यंत्र पवित्र ज्यामिति',
+    yantraDesc: 'यंत्र ग्रहों के विजुअल कोड हैं जो सकारात्मक ऊर्जा को आकर्षित करते हैं।',
+    playDrone: 'ध्वनि शुरू करें',
+    stopDrone: 'ध्वनि बंद करें',
+    japaCount: 'जाप संख्या',
+    times: 'बार',
+    dayLabel: 'समय: सुबह / सूर्योदय',
+    planetLabel: 'संबद्ध ग्रह',
+    wearLabel: 'धारण विधि',
+    benefitsLabel: 'लाभ'
+  }
+};
+
+const RUDRAKSHA_HI: { [key: string]: string } = {
+  '1 Mukhi (One-Faced) or 12 Mukhi': '१ मुखी (एक मुखी) या १२ मुखी रुद्राक्ष',
+  '2 Mukhi (Two-Faced)': '२ मुखी (दो मुखी) रुद्राक्ष',
+  '5 Mukhi (Five-Faced)': '५ मुखी (पंचमुखी) रुद्राक्ष',
+  '8 Mukhi (Eight-Faced)': '८ मुखी (अष्टमुखी) रुद्राक्ष',
+  '4 Mukhi (Four-Faced)': '४ मुखी (चतुर्मुखी) रुद्राक्ष',
+  '6 Mukhi (Six-Faced)': '६ मुखी (षष्ठमुखी) रुद्राक्ष',
+  '9 Mukhi (Nine-Faced)': '९ मुखी (नौ मुखी) रुद्राक्ष',
+  '7 Mukhi (Seven-Faced)': '७ मुखी (सप्तमुखी) रुद्राक्ष',
+  '3 Mukhi (Three-Faced)': '३ मुखी (त्रिमुखी) रुद्राक्ष'
+};
+
+export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali, lang }) => {
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorsRef = useRef<OscillatorNode[]>([]);
   const gainNodeRef = useRef<GainNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const t = TRANSLATIONS[lang];
+
   const lalKitabRemedies: LalKitabRemedy[] = getLalKitabRemedies(kundali);
   const spiritualRemedies: SpiritualRemedy[] = getSpiritualRemedies(kundali);
   const rudrakshas: RudrakshaRecommendation[] = recommendRudraksha(kundali);
 
-  // Sound Synthesizer: Meditative Vedic Chanting Drone
   const togglePlayChant = (mantraName: string) => {
     if (isPlaying === mantraName) {
       stopSound();
@@ -31,26 +84,21 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
 
   const playSound = () => {
     try {
-      // Create audio context
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContextClass();
       audioContextRef.current = ctx;
 
-      // Master Gain Node for volume control
       const masterGain = ctx.createGain();
       masterGain.gain.setValueAtTime(0.01, ctx.currentTime);
       masterGain.connect(ctx.destination);
       gainNodeRef.current = masterGain;
 
-      // Fade in master volume
       masterGain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 1.5);
 
-      // 1. Root Om frequency (approx 136.1 Hz - planetary cosmic frequency)
       const oscRoot = ctx.createOscillator();
       oscRoot.type = 'sawtooth';
       oscRoot.frequency.setValueAtTime(136.1, ctx.currentTime);
       
-      // Low pass filter to make the sound warm and smooth
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(280, ctx.currentTime);
@@ -58,22 +106,19 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
       oscRoot.connect(filter);
       filter.connect(masterGain);
 
-      // 2. Harmonic Fifth (204.15 Hz) for a pleasant meditative dyad
       const oscFifth = ctx.createOscillator();
       oscFifth.type = 'triangle';
       oscFifth.frequency.setValueAtTime(204.15, ctx.currentTime);
       oscFifth.connect(filter);
 
-      // 3. Vibrato (LFO to simulate respiratory rising and falling in chants)
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
-      lfo.frequency.setValueAtTime(0.18, ctx.currentTime); // very slow breathing cycle
+      lfo.frequency.setValueAtTime(0.18, ctx.currentTime);
       lfoGain.gain.setValueAtTime(0.08, ctx.currentTime);
       
       lfo.connect(lfoGain);
       lfoGain.connect(masterGain.gain);
 
-      // Start all oscillators
       oscRoot.start();
       oscFifth.start();
       lfo.start();
@@ -87,7 +132,6 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
   const stopSound = () => {
     if (gainNodeRef.current && audioContextRef.current) {
       const ctx = audioContextRef.current;
-      // Fade out audio smoothly to avoid clicks
       gainNodeRef.current.gain.setValueAtTime(gainNodeRef.current.gain.value, ctx.currentTime);
       gainNodeRef.current.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
 
@@ -100,21 +144,19 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
           }
           audioContextRef.current = null;
         } catch (e) {
-          // already closed
+          // closed
         }
       }, 600);
     }
     setIsPlaying(null);
   };
 
-  // Clean up audio on unmount
   useEffect(() => {
     return () => {
       stopSound();
     };
   }, []);
 
-  // Render Shree Yantra geometry on canvas
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -126,7 +168,6 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
 
     ctx.clearRect(0, 0, size, size);
     
-    // Draw background grid glow
     ctx.strokeStyle = 'rgba(142, 68, 173, 0.1)';
     ctx.lineWidth = 1;
     for (let i = 0; i < size; i += 20) {
@@ -138,13 +179,11 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
       ctx.stroke();
     }
 
-    // Sacred Geometry drawing
-    ctx.strokeStyle = 'rgba(243, 156, 18, 0.8)'; // Golden line
+    ctx.strokeStyle = 'rgba(243, 156, 18, 0.8)';
     ctx.shadowColor = 'rgba(243, 156, 18, 0.5)';
     ctx.shadowBlur = 10;
     ctx.lineWidth = 2;
 
-    // 1. Draw outer double circles
     ctx.beginPath();
     ctx.arc(center, center, 80, 0, Math.PI * 2);
     ctx.stroke();
@@ -153,7 +192,6 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
     ctx.arc(center, center, 85, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 2. Draw 8-petal lotus
     for (let s = 0; s < 8; s++) {
       const angle = (s * Math.PI) / 4;
       const x = center + Math.cos(angle) * 75;
@@ -163,11 +201,9 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
       ctx.stroke();
     }
 
-    // 3. Draw interlinked central triangles
-    ctx.strokeStyle = 'rgba(142, 68, 173, 0.9)'; // Purple line
+    ctx.strokeStyle = 'rgba(142, 68, 173, 0.9)';
     ctx.shadowColor = 'rgba(142, 68, 173, 0.5)';
     
-    // Triangle 1 pointing up
     ctx.beginPath();
     ctx.moveTo(center, center - 60);
     ctx.lineTo(center - 50, center + 30);
@@ -175,7 +211,6 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
     ctx.closePath();
     ctx.stroke();
 
-    // Triangle 2 pointing down
     ctx.beginPath();
     ctx.moveTo(center, center + 60);
     ctx.lineTo(center - 50, center - 30);
@@ -183,7 +218,6 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
     ctx.closePath();
     ctx.stroke();
 
-    // 4. Central Bindu dot
     ctx.fillStyle = 'var(--accent-gold)';
     ctx.shadowBlur = 15;
     ctx.shadowColor = 'var(--accent-gold)';
@@ -199,10 +233,10 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
         {/* Lal Kitab remedies */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-gold)', borderBottom: '1px solid rgba(243, 156, 18, 0.15)', paddingBottom: '8px' }}>
-            ✦ Lal Kitab Suitability Remedies
+            {t.lalKitabTitle}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            These remedies are designed to redirect planetary currents using behavioral changes, donations, and charity.
+            {t.lalKitabDesc}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -210,10 +244,7 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
               <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: '10px', borderLeft: '3px solid var(--accent-purple)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <h4 style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>{rem.title}</h4>
-                  <span className={`badge ${
-                    rem.category === 'Donation' ? 'badge-gold' : 
-                    rem.category === 'Feed Animals' ? 'badge-teal' : 'badge-purple'
-                  }`} style={{ fontSize: '0.65rem' }}>
+                  <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>
                     {rem.category}
                   </span>
                 </div>
@@ -226,26 +257,26 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
         {/* Rudraksha Suitability */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-teal)', borderBottom: '1px solid rgba(26,188,156,0.15)', paddingBottom: '8px' }}>
-            ✦ Rudraksha Recommendations
+            {t.rudrakshaTitle}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Rudraksha beads stabilize magnetic energy fields and balance planetary deficiencies without side effects.
+            {t.rudrakshaDesc}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {rudrakshas.map((rud, idx) => (
               <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: '10px', borderLeft: '3px solid var(--accent-teal)' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {rud.mukhi}
+                  {lang === 'hi' ? (RUDRAKSHA_HI[rud.mukhi] || rud.mukhi) : rud.mukhi}
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--accent-gold)', marginTop: '2px' }}>
-                  Planet: {rud.rulingPlanet}
+                  {t.planetLabel}: {rud.rulingPlanet}
                 </p>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                  <strong>Benefits:</strong> {rud.benefits}
+                  <strong>{t.benefitsLabel}:</strong> {rud.benefits}
                 </p>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '6px' }}>
-                  <strong>How to wear:</strong> {rud.wearingInstructions}
+                  <strong>{t.wearLabel}:</strong> {rud.wearingInstructions}
                 </p>
               </div>
             ))}
@@ -257,10 +288,10 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
         {/* Spiritual Remedies: Mantras & Chanting */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-purple)', borderBottom: '1px solid rgba(142, 68, 173, 0.15)', paddingBottom: '8px' }}>
-            ✦ Meditative Mantras & Beej Japa
+            {t.mantraTitle}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Chanting planetary mantras recalibrates the subconscious mind. Click the volume icon to start a simulated Vedic drone.
+            {t.mantraDesc}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -279,7 +310,7 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
                     }}
                   >
                     {isPlaying === sp.mantraName ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                    {isPlaying === sp.mantraName ? 'Stop Drone' : 'Play Drone'}
+                    {isPlaying === sp.mantraName ? t.stopDrone : t.playDrone}
                   </button>
                 </div>
 
@@ -288,12 +319,12 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
                 </p>
 
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '10px' }}>
-                  <strong>Translation:</strong> {sp.translation}
+                  <strong>{lang === 'hi' ? 'मंत्र का अनुवाद' : 'Translation'}:</strong> {sp.translation}
                 </p>
 
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Japa Count: {sp.japaCount} times</span>
-                  <span>Day: Morning / Sunrise</span>
+                  <span>{t.japaCount}: {sp.japaCount} {t.times}</span>
+                  <span>{t.dayLabel}</span>
                 </div>
               </div>
             ))}
@@ -303,10 +334,10 @@ export const RemediesEngine: React.FC<RemediesEngineProps> = ({ kundali }) => {
         {/* Yantra SACRED GEOMETRY */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
           <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-gold)', width: '100%', borderBottom: '1px solid rgba(243, 156, 18, 0.15)', paddingBottom: '8px', textAlign: 'left' }}>
-            ✦ Yantra Sacred Geometry
+            {t.yantraTitle}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', width: '100%' }}>
-            Yantras are visual layout codes of planetary deities that amplify beneficial energy.
+            {t.yantraDesc}
           </p>
 
           <canvas 

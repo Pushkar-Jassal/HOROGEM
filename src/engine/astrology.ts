@@ -85,137 +85,157 @@ const DASHA_YEARS: { [key: string]: number } = {
   Ketu: 7, Venus: 20, Sun: 6, Moon: 10, Mars: 7, Rahu: 18, Jupiter: 16, Saturn: 19, Mercury: 17
 };
 
-// Simple pseudo-random hash generator based on date and time strings for deterministic outputs
-function getSeed(dateStr: string, timeStr: string, locationStr: string): number {
-  const combined = dateStr + timeStr + locationStr;
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    hash = combined.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash);
-}
-
-// Generate seeded float between 0 and 1
-function seededRandom(seed: number, salt: number): number {
-  const x = Math.sin(seed + salt) * 10000;
-  return x - Math.floor(x);
-}
-
 export function calculateKundali(
   dob: string, // YYYY-MM-DD
   tob: string, // HH:MM
   place: string,
-  lat: number = 28.6139, // Default New Delhi
+  lat: number = 28.6139,
   lng: number = 77.2090
 ): KundaliResult {
-  const seed = getSeed(dob, tob, place);
-
-  // --- 1. Calculate Lagna (Ascendant) ---
-  // Lagna changes roughly 30 degrees every 2 hours, aligned with solar time.
-  const dateObj = new Date(dob);
-  const dayOfYear = Math.floor((dateObj.getTime() - new Date(dateObj.getFullYear(), 0, 0).getTime()) / 86400000);
+  // --- 1. Compute Time Constants ---
+  const birthDate = new Date(`${dob}T${tob}`);
+  const year = birthDate.getFullYear();
   
-  // Sun sign estimate based on date (approximate transit: Sun enters Aries ~April 13/14 in Vedic Sidereal)
-  // Sidereal Sun starts in Aries around day 103 (April 13)
-  const siderealSunPosDegrees = ((dayOfYear - 103 + 365) % 365) * (360 / 365.25);
-  const sunSignIndex = Math.floor(siderealSunPosDegrees / 30) % 12;
+  // Calculate days since J2000.0 (January 1.5, 2000 UTC)
+  // J2000 Unix timestamp: 946728000000 milliseconds
+  const d = (birthDate.getTime() - 946728000000) / 86400000;
 
-  // Local solar time calculation
+  // --- 2. Calculate Lahiri Ayanamsa (Sidereal adjustment) ---
+  // Ayanamsa is approx 23.85 degrees at year 2000, changing by 0.01396 degrees/year
+  const ayanamsa = 23.85 + 0.01396 * (year - 2000);
+
+  // --- 3. Compute Sun Tropical Position ---
+  const L_E = 280.460 + 0.985647 * d;
+  const M_E = 357.529 + 0.985600 * d;
+  const lambda_S = (L_E + 1.915 * Math.sin(M_E * Math.PI / 180) + 360) % 360;
+
+  // --- 4. Calculate Lagna (Ascendant) using Local Sunrise ---
+  // Approximate sunrise: Standard is 6:00 AM, but we adjust seasonally and by latitude.
+  const dayOfYear = Math.floor((birthDate.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
+  const sunriseOffsetHours = -0.4 * Math.cos((dayOfYear + 10) * 2 * Math.PI / 365) * Math.cos(lat * Math.PI / 180);
+  const sunriseHour = 6.0 + sunriseOffsetHours; // sunrise in local decimal hours
+  
   const [hours, minutes] = tob.split(':').map(Number);
-  const timeInMinutes = hours * 60 + minutes;
-  // Offset from sunrise (approx 6:00 AM)
-  const minutesSinceSunrise = (timeInMinutes - 360 + 1440) % 1440;
-  // Earth rotates 360 degrees in 1440 minutes, which is 0.25 degrees per minute
-  const degreesRotatedSinceSunrise = minutesSinceSunrise * 0.25;
-
-  const lagnaDegrees = (siderealSunPosDegrees + degreesRotatedSinceSunrise) % 360;
+  const birthHour = hours + minutes / 60;
+  
+  // Time offset in hours from local sunrise
+  const timeDifferenceFromSunrise = birthHour - sunriseHour;
+  // Earth rotates 15 degrees per hour
+  const rotationOffsetDegrees = timeDifferenceFromSunrise * 15;
+  const lagnaTropicalDegrees = (lambda_S + rotationOffsetDegrees + 360) % 360;
+  const lagnaDegrees = (lagnaTropicalDegrees - ayanamsa + 360) % 360;
   const lagnaIndex = Math.floor(lagnaDegrees / 30) % 12;
-  const lagnaDegreeInSign = lagnaDegrees % 30;
 
-  // --- 2. Calculate Moon Position (Rashi & Nakshatra) ---
-  // Moon travels 360 degrees in ~27.3 days, approx 13.18 degrees per day.
-  const baseMoonPosDegrees = (dayOfYear * 13.17639 + seededRandom(seed, 100) * 13.18) % 360;
-  const rashiIndex = Math.floor(baseMoonPosDegrees / 30) % 12;
-  const moonDegreeInSign = baseMoonPosDegrees % 30;
-
-  // Nakshatra is based on moon degrees: 360 / 27 = 13 degrees 20 minutes (13.333 degrees) per Nakshatra
-  const nakshatraIndex = Math.floor(baseMoonPosDegrees / 13.33333) % 27;
-  const nakshatra = NAKSHATRAS[nakshatraIndex];
-  const nakshatraPercentElapsed = (baseMoonPosDegrees % 13.33333) / 13.33333;
-
-  // --- 3. Planetary Placements (Deterministic based on DOB) ---
-  const planets = [
-    { name: 'Sun', symbol: 'Su', orbitalPeriod: 365.25, baseSpeed: 0.9856 },
-    { name: 'Moon', symbol: 'Mo', orbitalPeriod: 27.32, baseSpeed: 13.176 },
-    { name: 'Mars', symbol: 'Ma', orbitalPeriod: 686.98, baseSpeed: 0.524 },
-    { name: 'Mercury', symbol: 'Me', orbitalPeriod: 87.97, baseSpeed: 4.09 },
-    { name: 'Jupiter', symbol: 'Ju', orbitalPeriod: 4332.59, baseSpeed: 0.083 },
-    { name: 'Venus', symbol: 'Ve', orbitalPeriod: 224.7, baseSpeed: 1.602 },
-    { name: 'Saturn', symbol: 'Sa', orbitalPeriod: 10759.22, baseSpeed: 0.0334 },
-    { name: 'Rahu', symbol: 'Ra', orbitalPeriod: 6793, baseSpeed: -0.05295 }, // Always retrograde
-    { name: 'Ketu', symbol: 'Ke', orbitalPeriod: 6793, baseSpeed: -0.05295 }  // 180 degrees from Rahu
+  // --- 5. Calculate Planet Tropical Coordinates ---
+  // Orbital parameters: L (Mean Longitude), M (Mean Anomaly), a (Semi-major Axis)
+  const planetsConfig = [
+    { name: 'Sun', symbol: 'Su', a: 1.0 },
+    { name: 'Moon', symbol: 'Mo', a: 1.0 }, // Moon uses geocentric formula directly
+    { name: 'Mars', symbol: 'Ma', a: 1.5237, L: 355.453, L_rate: 0.524020, M: 19.388, M_rate: 0.524020, C: 10.60 },
+    { name: 'Mercury', symbol: 'Me', a: 0.3871, L: 252.250, L_rate: 4.092334, M: 174.796, M_rate: 4.092334, C: 4.75 },
+    { name: 'Jupiter', symbol: 'Ju', a: 5.2028, L: 34.404, L_rate: 0.083085, M: 19.650, M_rate: 0.083085, C: 5.55 },
+    { name: 'Venus', symbol: 'Ve', a: 0.7233, L: 181.980, L_rate: 1.602130, M: 50.115, M_rate: 1.602130, C: 0.78 },
+    { name: 'Saturn', symbol: 'Sa', a: 9.5388, L: 49.944, L_rate: 0.033444, M: 317.020, M_rate: 0.033444, C: 6.35 },
+    { name: 'Rahu', symbol: 'Ra', a: 1.0 }, // Shadow planet
+    { name: 'Ketu', symbol: 'Ke', a: 1.0 }  // Shadow planet
   ];
 
-  const planetaryPositions: PlanetPosition[] = planets.map((p, idx) => {
-    let rawDegrees = 0;
+  // Geocentric Moon
+  const L_Moon = 218.316 + 13.176396 * d;
+  const M_Moon = 134.963 + 13.064993 * d;
+  const lambda_Moon = (L_Moon + 6.289 * Math.sin(M_Moon * Math.PI / 180) + 360) % 360;
+
+  // Rahu (Mean Node)
+  const lambda_Rahu = (125.0445 - 0.052953 * d + 360) % 360;
+  // Ketu is opposite (180 deg)
+  const lambda_Ketu = (lambda_Rahu + 180) % 360;
+
+  const planetaryPositions: PlanetPosition[] = planetsConfig.map((p) => {
+    let tropicalLong = 0;
     let isRetro = false;
 
     if (p.name === 'Sun') {
-      rawDegrees = siderealSunPosDegrees;
+      tropicalLong = lambda_S;
     } else if (p.name === 'Moon') {
-      rawDegrees = baseMoonPosDegrees;
-    } else if (p.name === 'Ketu') {
-      // Ketu is always 180 degrees opposite to Rahu
-      const rahuPos = (dayOfYear * 0.05295 + seededRandom(seed, 200) * 360) % 360;
-      rawDegrees = (rahuPos + 180) % 360;
-      isRetro = true;
+      tropicalLong = lambda_Moon;
     } else if (p.name === 'Rahu') {
-      rawDegrees = (dayOfYear * 0.05295 + seededRandom(seed, 200) * 360) % 360;
+      tropicalLong = lambda_Rahu;
+      isRetro = true; // Nodes are always retrograde
+    } else if (p.name === 'Ketu') {
+      tropicalLong = lambda_Ketu;
       isRetro = true;
-    } else {
-      // Seeded orbital calculation
-      const cycles = (dateObj.getFullYear() - 1900) + (dayOfYear / 365);
-      const meanAnomaly = (cycles * 360 * (365.25 / p.orbitalPeriod) + seededRandom(seed, idx * 50) * 360) % 360;
-      rawDegrees = meanAnomaly;
-      // Retrograde check for non-luminaries (approx 20% chance based on seed)
-      isRetro = seededRandom(seed, idx * 25) < 0.2;
+    } else if (p.L && p.M && p.L_rate && p.M_rate && p.C) {
+      // Heliocentric elements
+      const L_P = p.L + p.L_rate * d;
+      const M_P = p.M + p.M_rate * d;
+      const helioLong = (L_P + p.C * Math.sin(M_P * Math.PI / 180) + 360) % 360;
+
+      // Geocentric vector translation: SP + SE vector addition
+      const radS = lambda_S * Math.PI / 180;
+      const radP = helioLong * Math.PI / 180;
+
+      const xG = p.a * Math.cos(radP) + Math.cos(radS);
+      const yG = p.a * Math.sin(radP) + Math.sin(radS);
+
+      tropicalLong = (Math.atan2(yG, xG) * 180 / Math.PI + 360) % 360;
+
+      // Retrograde check: Outer planets (Mars, Jupiter, Saturn) are retrograde 
+      // when opposite the Sun (angular distance ~ 120 to 240 degrees)
+      const angleDiff = Math.abs(tropicalLong - lambda_S);
+      const normDiff = angleDiff > 180 ? 360 - angleDiff : angleDiff;
+      if (['Mars', 'Jupiter', 'Saturn'].includes(p.name)) {
+        isRetro = normDiff > 115; // Retrograde condition
+      } else {
+        // Inner planets (Mercury, Venus) are retrograde during inferior conjunctions (elongation < 15 deg)
+        // and near the Sun (conjunction check)
+        // Check pseudo-conjunction retrograde based on time delta
+        const pseudoState = Math.sin((d + 10) * Math.PI / 25);
+        isRetro = normDiff < 18 && pseudoState > 0.45;
+      }
     }
 
-    const signIdx = Math.floor(rawDegrees / 30) % 12;
-    const degInSign = rawDegrees % 30;
+    // Convert to Sidereal (Lahiri)
+    const siderealLong = (tropicalLong - ayanamsa + 360) % 360;
+    const signIndex = Math.floor(siderealLong / 30) % 12;
+    const degree = siderealLong % 30;
 
-    // Calculate House number relative to Lagna Index
+    // House calculation relative to Lagna Index
     // House 1 starts at LagnaIndex, House 2 at LagnaIndex+1, etc.
-    const house = ((signIdx - lagnaIndex + 12) % 12) + 1;
-    
-    // Strengths: Combines planetary sign placements (exalted/debilitated/own sign) and degree
-    let strength = Math.floor(30 + seededRandom(seed, idx * 10) * 60);
-    // Exaltation adjustments (mocking key states)
-    if (p.name === 'Sun' && signIdx === 0) strength = 95;      // Sun exalted in Aries
-    if (p.name === 'Moon' && signIdx === 1) strength = 98;     // Moon exalted in Taurus
-    if (p.name === 'Jupiter' && signIdx === 3) strength = 97;  // Jupiter exalted in Cancer
-    if (p.name === 'Saturn' && signIdx === 6) strength = 96;   // Saturn exalted in Libra
-    if (p.name === 'Mercury' && signIdx === 5) strength = 95;  // Mercury exalted in Virgo
+    const house = ((signIndex - lagnaIndex + 12) % 12) + 1;
 
-    // Debilitation adjustments
-    if (p.name === 'Sun' && signIdx === 6) strength = 20;      // Sun debilitated in Libra
-    if (p.name === 'Moon' && signIdx === 7) strength = 18;     // Moon debilitated in Scorpio
-    if (p.name === 'Jupiter' && signIdx === 9) strength = 15;  // Jupiter debilitated in Capricorn
-    if (p.name === 'Saturn' && signIdx === 0) strength = 22;   // Saturn debilitated in Aries
-    
+    // Calculate strengths (exalted/debilitated coefficients)
+    let strength = 50;
+    if (p.name === 'Sun') strength = signIndex === 5 ? 75 : (signIndex === 0 ? 95 : (signIndex === 6 ? 25 : 55)); // exalted in Aries, debilitated in Libra
+    else if (p.name === 'Moon') strength = signIndex === 1 ? 95 : (signIndex === 7 ? 20 : 60); // exalted in Taurus
+    else if (p.name === 'Mars') strength = signIndex === 9 ? 95 : (signIndex === 3 ? 20 : 50); // exalted in Capricorn
+    else if (p.name === 'Mercury') strength = signIndex === 5 ? 90 : (signIndex === 11 ? 25 : 65); // exalted in Virgo
+    else if (p.name === 'Jupiter') strength = signIndex === 3 ? 98 : (signIndex === 9 ? 15 : 70); // exalted in Cancer, debilitated in Capricorn
+    else if (p.name === 'Venus') strength = signIndex === 11 ? 95 : (signIndex === 5 ? 20 : 55); // exalted in Pisces
+    else if (p.name === 'Saturn') strength = signIndex === 6 ? 96 : (signIndex === 0 ? 20 : 45); // exalted in Libra
+
     return {
       name: p.name,
       symbol: p.symbol,
-      sign: SIGNS[signIdx],
-      signIndex: signIdx,
-      degree: parseFloat(degInSign.toFixed(2)),
+      sign: SIGNS[signIndex],
+      signIndex,
+      degree: parseFloat(degree.toFixed(2)),
       house,
       isRetrograde: isRetro,
       strength
     };
   });
 
-  // --- 4. Chart Assembly (D1, D9, D10, Chandra) ---
+  // --- 6. Moon Sign and Nakshatra calculations ---
+  const moonPos = planetaryPositions.find(p => p.name === 'Moon')!;
+  const rashiIndex = moonPos.signIndex;
+  
+  // Decimals calculation for Nakshatra (360 degrees / 27 = 13.333 deg per Nakshatra)
+  const totalMoonSiderealDegrees = rashiIndex * 30 + moonPos.degree;
+  const nakshatraIndex = Math.floor(totalMoonSiderealDegrees / 13.33333) % 27;
+  const nakshatra = NAKSHATRAS[nakshatraIndex];
+  const nakshatraPercentElapsed = (totalMoonSiderealDegrees % 13.33333) / 13.33333;
+
+  // --- 7. Divisional Chart generation (D1, D9, D10, Chandra) ---
   const makeChart = (chartLagnaIndex: number, placements: { symbol: string, signIdx: number }[]): ChartData => {
     const houses: { [key: number]: string[] } = {};
     const signs: { [key: number]: number } = {};
@@ -230,67 +250,42 @@ export function calculateKundali(
     return { houses, signs };
   };
 
-  // D1 Chart Placements
   const d1Placements = planetaryPositions.map(p => ({ symbol: p.symbol, signIdx: p.signIndex }));
   const d1Chart = makeChart(lagnaIndex, d1Placements);
 
-  // D9 (Navamsa) Placements
-  // Each sign of 30 deg has 9 navamsas of 3°20' (3.333 deg)
+  // D9 (Navamsa)
   const d9Placements = planetaryPositions.map(p => {
-    const navamsaDivision = Math.floor(p.degree / 3.3333);
-    // Navamsa starting sign varies by element of the sign:
-    // Fire signs (Aries, Leo, Sag) start from Aries (0)
-    // Earth signs (Taurus, Virgo, Cap) start from Capricorn (9)
-    // Air signs (Gemini, Libra, Aqu) start from Libra (6)
-    // Water signs (Cancer, Sco, Pis) start from Cancer (3)
+    const navDivision = Math.floor(p.degree / 3.3333);
     const element = p.signIndex % 4; // 0=Fire, 1=Earth, 2=Air, 3=Water
-    let startSign = 0;
-    if (element === 0) startSign = 0; // Aries
-    else if (element === 1) startSign = 9; // Capricorn
-    else if (element === 2) startSign = 6; // Libra
-    else if (element === 3) startSign = 3; // Cancer
-
-    const d9SignIdx = (startSign + navamsaDivision) % 12;
+    const startSign = element === 0 ? 0 : (element === 1 ? 9 : (element === 2 ? 6 : 3));
+    const d9SignIdx = (startSign + navDivision) % 12;
     return { symbol: p.symbol, signIdx: d9SignIdx };
   });
-  // Lagna Navamsa
+  const lagnaDegreeInSign = lagnaDegrees % 30;
   const lagnaNavDivision = Math.floor(lagnaDegreeInSign / 3.3333);
   const lagnaElement = lagnaIndex % 4;
-  let lagnaStartSign = 0;
-  if (lagnaElement === 0) lagnaStartSign = 0;
-  else if (lagnaElement === 1) lagnaStartSign = 9;
-  else if (lagnaElement === 2) lagnaStartSign = 6;
-  else if (lagnaElement === 3) lagnaStartSign = 3;
+  const lagnaStartSign = lagnaElement === 0 ? 0 : (lagnaElement === 1 ? 9 : (lagnaElement === 2 ? 6 : 3));
   const d9LagnaIndex = (lagnaStartSign + lagnaNavDivision) % 12;
   const d9Chart = makeChart(d9LagnaIndex, d9Placements);
 
-  // D10 (Dashamsha) Placements
-  // Each sign divided into 10 parts of 3 degrees.
+  // D10 (Dashamsha)
   const d10Placements = planetaryPositions.map(p => {
     const division = Math.floor(p.degree / 3.0);
-    // For odd signs (Aries, Gem, Leo, Lib, Sag, Aqu), counting starts from the sign itself
-    // For even signs, counting starts from 9th sign from the sign
-    const isOdd = p.signIndex % 2 === 0; // index 0 (Aries) is odd sign
-    let startSign = p.signIndex;
-    if (!isOdd) {
-      startSign = (p.signIndex + 8) % 12; // 9th sign is +8 indices
-    }
+    const isOdd = p.signIndex % 2 === 0;
+    const startSign = isOdd ? p.signIndex : (p.signIndex + 8) % 12;
     const d10SignIdx = (startSign + division) % 12;
     return { symbol: p.symbol, signIdx: d10SignIdx };
   });
   const lagnaD10Division = Math.floor(lagnaDegreeInSign / 3.0);
   const lagnaIsOdd = lagnaIndex % 2 === 0;
-  let d10LagnaStart = lagnaIndex;
-  if (!lagnaIsOdd) {
-    d10LagnaStart = (lagnaIndex + 8) % 12;
-  }
+  const d10LagnaStart = lagnaIsOdd ? lagnaIndex : (lagnaIndex + 8) % 12;
   const d10LagnaIndex = (d10LagnaStart + lagnaD10Division) % 12;
   const d10Chart = makeChart(d10LagnaIndex, d10Placements);
 
-  // Chandra Kundali (Moon Sign is House 1)
+  // Chandra Chart
   const chandraChart = makeChart(rashiIndex, d1Placements);
 
-  // --- 5. Yogas Calculation ---
+  // --- 8. Yogas ---
   const activeYogas = [
     {
       name: 'Budhaditya Yoga',
@@ -313,7 +308,7 @@ export function calculateKundali(
       active: (() => {
         const ve = planetaryPositions.find(p => p.name === 'Venus');
         if (!ve) return false;
-        const isStrongSign = [1, 6, 11].includes(ve.signIndex); // Taurus, Libra, Pisces
+        const isStrongSign = [1, 6, 11].includes(ve.signIndex);
         const isKendra = [1, 4, 7, 10].includes(ve.house);
         return isStrongSign && isKendra;
       })()
@@ -332,45 +327,35 @@ export function calculateKundali(
     {
       name: 'Laxmi Yoga',
       description: 'Lagna Lord is powerful and the 9th Lord occupies a Kendra or Trikona house. Generates abundant wealth, high status, and philanthropic mindset.',
-      active: seededRandom(seed, 40) > 0.6 // Approximated
+      active: L_E > 150 && L_Moon < 250 // Approximated
     }
   ];
 
-  // --- 6. Doshas Calculation ---
-  // Manglik Dosha: Mars in 1, 4, 7, 8, 12 houses
+  // --- 9. Doshas ---
   const marsHouse = planetaryPositions.find(p => p.name === 'Mars')?.house || 0;
   const isManglik = [1, 4, 7, 8, 12].includes(marsHouse);
   const manglikSeverity = !isManglik ? 'None' : ([7, 8].includes(marsHouse) ? 'High' : 'Low');
   
-  // Kaal Sarp Dosha: All planets between Rahu and Ketu
-  // For simplicity, we check if Rahu and Ketu split the chart, and seeded check
-  const isKaalSarp = seededRandom(seed, 95) < 0.15; // 15% chance
+  const isKaalSarp = (d % 7) < 1.2; // 17% chance
   
-  // Sade Sati: Saturn is in 12th, 1st, or 2nd house from Moon
   const saturnHouse = planetaryPositions.find(p => p.name === 'Saturn')?.house || 0;
   const moonHouse = planetaryPositions.find(p => p.name === 'Moon')?.house || 0;
   const houseDiff = (saturnHouse - moonHouse + 12) % 12;
-  const isSadeSati = [11, 0, 1].includes(houseDiff); // 12th (diff=11), 1st (diff=0), 2nd (diff=1)
+  const isSadeSati = [11, 0, 1].includes(houseDiff);
   let sadeSatiPhase = 'None';
   if (houseDiff === 11) sadeSatiPhase = 'Rising (First Phase)';
   else if (houseDiff === 0) sadeSatiPhase = 'Peak (Second Phase)';
   else if (houseDiff === 1) sadeSatiPhase = 'Setting (Third Phase)';
 
-  // --- 7. Dasha Calculation (Vimshottari) ---
-  // Starting point based on Nakshatra Ruler
+  // --- 10. Vimshottari Dasha chronology ---
   const startDashaRuler = nakshatra.ruler;
   const startDashaIdx = DASHA_ORDER.indexOf(startDashaRuler);
-  
-  // Remaining duration of the first dasha: (1 - nakshatraPercentElapsed) * totalYears
   const initialDashaTotalYears = DASHA_YEARS[startDashaRuler];
   const initialDashaRemainingYears = (1 - nakshatraPercentElapsed) * initialDashaTotalYears;
 
-  const birthDate = new Date(dob + 'T' + tob);
   const dashas: DashaPeriod[] = [];
-
   let currentDate = new Date(birthDate.getTime());
   
-  // Calculate starting dasha end date
   const initialDashaEndMs = currentDate.getTime() + initialDashaRemainingYears * 365.25 * 24 * 60 * 60 * 1000;
   const initialDashaEnd = new Date(initialDashaEndMs);
   
@@ -381,9 +366,8 @@ export function calculateKundali(
   });
 
   currentDate = initialDashaEnd;
-
-  // Compute subsequent dashas for the next 100 years
   let dashaPointer = (startDashaIdx + 1) % 9;
+  
   for (let i = 0; i < 9; i++) {
     const lord = DASHA_ORDER[dashaPointer];
     const years = DASHA_YEARS[lord];
@@ -399,29 +383,23 @@ export function calculateKundali(
     currentDate = dashaEnd;
     dashaPointer = (dashaPointer + 1) % 9;
 
-    // Break if we exceed 100 years from birth
     if (currentDate.getTime() - birthDate.getTime() > 100 * 365.25 * 24 * 60 * 60 * 1000) {
       break;
     }
   }
 
-  // Populate sub-dashas (Antardasha) for the current dasha period (relative to 2026/current year)
-  // Let's find which dasha is active today (approx June 2026 or system time)
+  // Populate active sub-dashas (Antardasha)
   const now = new Date();
   dashas.forEach(d => {
     if (d.start <= now && d.end >= now) {
-      // Calculate 9 sub-dashas (lords start from the Mahadasha lord)
       const subLordStartIdx = DASHA_ORDER.indexOf(d.lord);
       let subCurrentDate = new Date(d.start.getTime());
       const totalMahadashaYears = DASHA_YEARS[d.lord];
-      const dashaDurationMs = d.end.getTime() - d.start.getTime();
 
       d.subDashas = [];
       for (let s = 0; s < 9; s++) {
         const subLord = DASHA_ORDER[(subLordStartIdx + s) % 9];
         const subLordYears = DASHA_YEARS[subLord];
-        
-        // Antardasha duration ratio = (subLordYears / 120) * Mahadasha duration
         const subDurationMs = (subLordYears / 120) * (totalMahadashaYears * 365.25 * 24 * 60 * 60 * 1000);
         const subEnd = new Date(subCurrentDate.getTime() + subDurationMs);
 
