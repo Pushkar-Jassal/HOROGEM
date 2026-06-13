@@ -90,6 +90,43 @@ const DASHA_YEARS: { [key: string]: number } = {
   Ketu: 7, Venus: 20, Sun: 6, Moon: 10, Mars: 7, Rahu: 18, Jupiter: 16, Saturn: 19, Mercury: 17
 };
 
+const SIGN_RULERS = [
+  'Mars',   // Aries (0)
+  'Venus',  // Taurus (1)
+  'Mercury',// Gemini (2)
+  'Moon',   // Cancer (3)
+  'Sun',    // Leo (4)
+  'Mercury',// Virgo (5)
+  'Venus',  // Libra (6)
+  'Mars',   // Scorpio (7)
+  'Jupiter',// Sagittarius (8)
+  'Saturn', // Capricorn (9)
+  'Saturn', // Aquarius (10)
+  'Jupiter' // Pisces (11)
+];
+
+function getTimezoneOffset(place: string): number {
+  const p = place.toLowerCase();
+  if (p.includes('nepal') || p.includes('kathmandu')) return 5.75;
+  if (p.includes('afghanistan') || p.includes('kabul')) return 4.5;
+  if (p.includes('pakistan') || p.includes('karachi') || p.includes('lahore') || p.includes('islamabad')) return 5.0;
+  if (p.includes('bangladesh') || p.includes('dhaka') || p.includes('bhutan') || p.includes('thimphu')) return 6.0;
+  if (p.includes('sri lanka') || p.includes('colombo')) return 5.5;
+  if (p.includes('china') || p.includes('beijing') || p.includes('shanghai') || p.includes('hong kong') || p.includes('singapore') || p.includes('kuala lumpur') || p.includes('malaysia') || p.includes('manila') || p.includes('philippines')) return 8.0;
+  if (p.includes('japan') || p.includes('tokyo') || p.includes('osaka') || p.includes('seoul') || p.includes('south korea')) return 9.0;
+  if (p.includes('thailand') || p.includes('bangkok') || p.includes('jakarta') || p.includes('indonesia')) return 7.0;
+  if (p.includes('dubai') || p.includes('abu dhabi') || p.includes('sharjah') || p.includes('uae') || p.includes('muscat') || p.includes('oman')) return 4.0;
+  if (p.includes('saudi arabia') || p.includes('riyadh') || p.includes('jeddah') || p.includes('doha') || p.includes('qatar') || p.includes('kuwait') || p.includes('bahrain') || p.includes('manama') || p.includes('nairobi') || p.includes('kenya') || p.includes('moscow') || p.includes('russia')) return 3.0;
+  if (p.includes('egypt') || p.includes('cairo') || p.includes('south africa') || p.includes('cape town') || p.includes('johannesburg')) return 2.0;
+  if (p.includes('france') || p.includes('paris') || p.includes('marseille') || p.includes('germany') || p.includes('berlin') || p.includes('munich') || p.includes('frankfurt') || p.includes('italy') || p.includes('rome') || p.includes('milan') || p.includes('spain') || p.includes('madrid') || p.includes('barcelona')) return 1.0;
+  if (p.includes('uk') || p.includes('london') || p.includes('manchester') || p.includes('birmingham')) return 0.0;
+  if (p.includes('usa') || p.includes('ny') || p.includes('dc') || p.includes('ma') || p.includes('fl') || p.includes('new york') || p.includes('washington') || p.includes('boston') || p.includes('miami') || p.includes('toronto') || p.includes('montreal') || p.includes('on') || p.includes('qc')) return -5.0; // Eastern Time
+  if (p.includes('chicago') || p.includes('houston') || p.includes('il') || p.includes('tx')) return -6.0; // Central Time
+  if (p.includes('los angeles') || p.includes('san francisco') || p.includes('ca') || p.includes('vancouver') || p.includes('bc')) return -8.0; // Pacific Time
+  if (p.includes('sydney') || p.includes('nsw') || p.includes('melbourne') || p.includes('vic') || p.includes('brisbane') || p.includes('qld')) return 10.0;
+  return 5.5; // Default to IST (India)
+}
+
 export function calculateKundali(
   dob: string, // YYYY-MM-DD
   tob: string, // HH:MM
@@ -98,15 +135,20 @@ export function calculateKundali(
   lng: number = 77.2090
 ): KundaliResult {
   // --- 1. Compute Time Constants ---
-  const birthDate = new Date(`${dob}T${tob}`);
-  const year = birthDate.getFullYear();
+  const tzOffset = getTimezoneOffset(place);
+  
+  // Parse in UTC to ensure timezone independence
+  const utcDate = new Date(`${dob}T${tob}Z`);
+  
+  // Subtract timezone offset to get actual UTC time
+  const utcTimeMs = utcDate.getTime() - tzOffset * 60 * 60 * 1000;
+  const birthDate = new Date(utcTimeMs);
+  const year = birthDate.getUTCFullYear();
   
   // Calculate days since J2000.0 (January 1.5, 2000 UTC)
-  // J2000 Unix timestamp: 946728000000 milliseconds
-  const d = (birthDate.getTime() - 946728000000) / 86400000;
+  const d = (utcTimeMs - 946728000000) / 86400000;
 
   // --- 2. Calculate Lahiri Ayanamsa (Sidereal adjustment) ---
-  // Ayanamsa is approx 23.85 degrees at year 2000, changing by 0.01396 degrees/year
   const ayanamsa = 23.85 + 0.01396 * (year - 2000);
 
   // --- 3. Compute Sun Tropical Position ---
@@ -114,38 +156,42 @@ export function calculateKundali(
   const M_E = 357.529 + 0.985600 * d;
   const lambda_S = (L_E + 1.915 * Math.sin(M_E * Math.PI / 180) + 360) % 360;
 
-  // --- 4. Calculate Lagna (Ascendant) using Local Sunrise ---
-  // Approximate sunrise: Standard is 6:00 AM, but we adjust seasonally and by latitude.
-  const dayOfYear = Math.floor((birthDate.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
-  const sunriseOffsetHours = -0.4 * Math.cos((dayOfYear + 10) * 2 * Math.PI / 365) * Math.cos(lat * Math.PI / 180);
-  const sunriseHour = 6.0 + sunriseOffsetHours; // sunrise in local decimal hours
+  // --- 4. Calculate Lagna (Ascendant) using Oblique Ascension ---
+  // gmst in degrees
+  const gmst = (280.46061837 + 360.98564736629 * d + 360) % 360;
+  // lst in degrees
+  const lst = (gmst + lng + 360) % 360;
   
-  const [hours, minutes] = tob.split(':').map(Number);
-  const birthHour = hours + minutes / 60;
+  const lstRad = lst * Math.PI / 180;
+  const latRad = lat * Math.PI / 180;
   
-  // Time offset in hours from local sunrise
-  const timeDifferenceFromSunrise = birthHour - sunriseHour;
-  // Earth rotates 15 degrees per hour
-  const rotationOffsetDegrees = timeDifferenceFromSunrise * 15;
-  const lagnaTropicalDegrees = (lambda_S + rotationOffsetDegrees + 360) % 360;
-  const lagnaDegrees = (lagnaTropicalDegrees - ayanamsa + 360) % 360;
+  // Obliquity of the ecliptic in radians
+  const epsilon = (23.4392911 - 0.000000356 * d) * Math.PI / 180;
+  
+  // Calculate Ascendant (Asc) tropical longitude
+  const num = Math.cos(lstRad);
+  const den = -(Math.sin(lstRad) * Math.cos(epsilon) + Math.tan(latRad) * Math.sin(epsilon));
+  
+  const ascTropicalRad = Math.atan2(num, den);
+  const ascTropical = (ascTropicalRad * 180 / Math.PI + 360) % 360;
+  
+  // Convert to Sidereal (Lahiri)
+  const lagnaDegrees = (ascTropical - ayanamsa + 360) % 360;
   const lagnaIndex = Math.floor(lagnaDegrees / 30) % 12;
 
   // --- 5. Calculate Planet Tropical Coordinates ---
-  // Orbital parameters: L (Mean Longitude), M (Mean Anomaly), a (Semi-major Axis)
   const planetsConfig = [
     { name: 'Sun', symbol: 'Su', a: 1.0 },
-    { name: 'Moon', symbol: 'Mo', a: 1.0 }, // Moon uses geocentric formula directly
+    { name: 'Moon', symbol: 'Mo', a: 1.0 },
     { name: 'Mars', symbol: 'Ma', a: 1.5237, L: 355.453, L_rate: 0.524020, M: 19.388, M_rate: 0.524020, C: 10.60 },
     { name: 'Mercury', symbol: 'Me', a: 0.3871, L: 252.250, L_rate: 4.092334, M: 174.796, M_rate: 4.092334, C: 4.75 },
     { name: 'Jupiter', symbol: 'Ju', a: 5.2028, L: 34.404, L_rate: 0.083085, M: 19.650, M_rate: 0.083085, C: 5.55 },
     { name: 'Venus', symbol: 'Ve', a: 0.7233, L: 181.980, L_rate: 1.602130, M: 50.115, M_rate: 1.602130, C: 0.78 },
     { name: 'Saturn', symbol: 'Sa', a: 9.5388, L: 49.944, L_rate: 0.033444, M: 317.020, M_rate: 0.033444, C: 6.35 },
-    { name: 'Rahu', symbol: 'Ra', a: 1.0 }, // Shadow planet
-    { name: 'Ketu', symbol: 'Ke', a: 1.0 }  // Shadow planet
+    { name: 'Rahu', symbol: 'Ra', a: 1.0 },
+    { name: 'Ketu', symbol: 'Ke', a: 1.0 }
   ];
 
-  // Geocentric Moon with Keplerian perturbations
   const rad = Math.PI / 180;
   const L_Moon = (218.316 + 13.176396 * d) % 360;
   const M_Moon = (134.963 + 13.064993 * d) % 360;
@@ -160,10 +206,7 @@ export function calculateKundali(
   const parallactic = -0.114 * Math.sin(D_Elong * rad);
 
   const lambda_Moon = (L_Moon + eqCenter + evection + variation + annualEq + parallactic + 360) % 360;
-
-  // Rahu (Mean Node)
   const lambda_Rahu = (125.0445 - 0.052953 * d + 360) % 360;
-  // Ketu is opposite (180 deg)
   const lambda_Ketu = (lambda_Rahu + 180) % 360;
 
   const planetaryPositions: PlanetPosition[] = planetsConfig.map((p) => {
@@ -176,17 +219,15 @@ export function calculateKundali(
       tropicalLong = lambda_Moon;
     } else if (p.name === 'Rahu') {
       tropicalLong = lambda_Rahu;
-      isRetro = true; // Nodes are always retrograde
+      isRetro = true;
     } else if (p.name === 'Ketu') {
       tropicalLong = lambda_Ketu;
       isRetro = true;
     } else if (p.L && p.M && p.L_rate && p.M_rate && p.C) {
-      // Heliocentric elements
       const L_P = p.L + p.L_rate * d;
       const M_P = p.M + p.M_rate * d;
       const helioLong = (L_P + p.C * Math.sin(M_P * Math.PI / 180) + 360) % 360;
 
-      // Geocentric vector translation: SP + SE vector addition
       const radS = lambda_S * Math.PI / 180;
       const radP = helioLong * Math.PI / 180;
 
@@ -195,41 +236,30 @@ export function calculateKundali(
 
       tropicalLong = (Math.atan2(yG, xG) * 180 / Math.PI + 360) % 360;
 
-      // Retrograde check: Outer planets (Mars, Jupiter, Saturn) are retrograde 
-      // when opposite the Sun (angular distance ~ 120 to 240 degrees)
       const angleDiff = Math.abs(tropicalLong - lambda_S);
       const normDiff = angleDiff > 180 ? 360 - angleDiff : angleDiff;
       if (['Mars', 'Jupiter', 'Saturn'].includes(p.name)) {
-        isRetro = normDiff > 115; // Retrograde condition
+        isRetro = normDiff > 115;
       } else {
-        // Inner planets (Mercury, Venus) are retrograde during inferior conjunctions (elongation < 15 deg)
-        // and near the Sun (conjunction check)
-        // Check pseudo-conjunction retrograde based on time delta
         const pseudoState = Math.sin((d + 10) * Math.PI / 25);
         isRetro = normDiff < 18 && pseudoState > 0.45;
       }
     }
 
-    // Convert to Sidereal (Lahiri)
     const siderealLong = (tropicalLong - ayanamsa + 360) % 360;
     const signIndex = Math.floor(siderealLong / 30) % 12;
     const degree = siderealLong % 30;
-
-    // House calculation relative to Lagna Index
-    // House 1 starts at LagnaIndex, House 2 at LagnaIndex+1, etc.
     const house = ((signIndex - lagnaIndex + 12) % 12) + 1;
 
-    // Calculate strengths (exalted/debilitated coefficients)
     let strength = 50;
-    if (p.name === 'Sun') strength = signIndex === 5 ? 75 : (signIndex === 0 ? 95 : (signIndex === 6 ? 25 : 55)); // exalted in Aries, debilitated in Libra
-    else if (p.name === 'Moon') strength = signIndex === 1 ? 95 : (signIndex === 7 ? 20 : 60); // exalted in Taurus
-    else if (p.name === 'Mars') strength = signIndex === 9 ? 95 : (signIndex === 3 ? 20 : 50); // exalted in Capricorn
-    else if (p.name === 'Mercury') strength = signIndex === 5 ? 90 : (signIndex === 11 ? 25 : 65); // exalted in Virgo
-    else if (p.name === 'Jupiter') strength = signIndex === 3 ? 98 : (signIndex === 9 ? 15 : 70); // exalted in Cancer, debilitated in Capricorn
-    else if (p.name === 'Venus') strength = signIndex === 11 ? 95 : (signIndex === 5 ? 20 : 55); // exalted in Pisces
-    else if (p.name === 'Saturn') strength = signIndex === 6 ? 96 : (signIndex === 0 ? 20 : 45); // exalted in Libra
+    if (p.name === 'Sun') strength = signIndex === 5 ? 75 : (signIndex === 0 ? 95 : (signIndex === 6 ? 25 : 55));
+    else if (p.name === 'Moon') strength = signIndex === 1 ? 95 : (signIndex === 7 ? 20 : 60);
+    else if (p.name === 'Mars') strength = signIndex === 9 ? 95 : (signIndex === 3 ? 20 : 50);
+    else if (p.name === 'Mercury') strength = signIndex === 5 ? 90 : (signIndex === 11 ? 25 : 65);
+    else if (p.name === 'Jupiter') strength = signIndex === 3 ? 98 : (signIndex === 9 ? 15 : 70);
+    else if (p.name === 'Venus') strength = signIndex === 11 ? 95 : (signIndex === 5 ? 20 : 55);
+    else if (p.name === 'Saturn') strength = signIndex === 6 ? 96 : (signIndex === 0 ? 20 : 45);
 
-    // Exaltation & Debilitation checks
     const isExalted = (p.name === 'Sun' && signIndex === 0) ||
                       (p.name === 'Moon' && signIndex === 1) ||
                       (p.name === 'Mars' && signIndex === 9) ||
@@ -246,14 +276,12 @@ export function calculateKundali(
                           (p.name === 'Venus' && signIndex === 5) ||
                           (p.name === 'Saturn' && signIndex === 0);
 
-    // Vargottama check (same sign in D1 and D9)
     const navDivision = Math.floor(degree / 3.33333);
-    const element = signIndex % 4; // 0=Fire, 1=Earth, 2=Air, 3=Water
+    const element = signIndex % 4;
     const startSign = element === 0 ? 0 : (element === 1 ? 9 : (element === 2 ? 6 : 3));
     const d9SignIdx = (startSign + navDivision) % 12;
     const isVargottama = signIndex === d9SignIdx;
 
-    // Combustion (Ast) check against Sun
     const diff = Math.abs(tropicalLong - lambda_S);
     const normDiff = diff > 180 ? 360 - diff : diff;
 
@@ -287,7 +315,6 @@ export function calculateKundali(
   const moonPos = planetaryPositions.find(p => p.name === 'Moon')!;
   const rashiIndex = moonPos.signIndex;
   
-  // Decimals calculation for Nakshatra (360 degrees / 27 = 13.333 deg per Nakshatra)
   const totalMoonSiderealDegrees = rashiIndex * 30 + moonPos.degree;
   const nakshatraIndex = Math.floor(totalMoonSiderealDegrees / 13.33333) % 27;
   const nakshatra = NAKSHATRAS[nakshatraIndex];
@@ -301,7 +328,6 @@ export function calculateKundali(
       houses[h] = [];
       signs[h] = (chartLagnaIndex + h - 1) % 12;
     }
-    // Sort placements in ascending order of degree
     const sortedPlacements = [...placements].sort((a, b) => a.degree - b.degree);
     sortedPlacements.forEach(p => {
       const houseNum = ((p.signIdx - chartLagnaIndex + 12) % 12) + 1;
@@ -316,7 +342,7 @@ export function calculateKundali(
   // D9 (Navamsa)
   const d9Placements = planetaryPositions.map(p => {
     const navDivision = Math.floor(p.degree / 3.3333);
-    const element = p.signIndex % 4; // 0=Fire, 1=Earth, 2=Air, 3=Water
+    const element = p.signIndex % 4;
     const startSign = element === 0 ? 0 : (element === 1 ? 9 : (element === 2 ? 6 : 3));
     const d9SignIdx = (startSign + navDivision) % 12;
     return { symbol: p.symbol, signIdx: d9SignIdx, degree: p.degree };
@@ -387,7 +413,21 @@ export function calculateKundali(
     {
       name: 'Laxmi Yoga',
       description: 'Lagna Lord is powerful and the 9th Lord occupies a Kendra or Trikona house. Generates abundant wealth, high status, and philanthropic mindset.',
-      active: L_E > 150 && L_Moon < 250 // Approximated
+      active: (() => {
+        const lagnaLordName = SIGN_RULERS[lagnaIndex];
+        const lagnaLord = planetaryPositions.find(p => p.name === lagnaLordName);
+        if (!lagnaLord) return false;
+        
+        const isLagnaLordPowerful = lagnaLord.strength >= 50 && !lagnaLord.isDebilitated && !lagnaLord.isCombust;
+        
+        const ninthHouseSign = (lagnaIndex + 8) % 12;
+        const ninthLordName = SIGN_RULERS[ninthHouseSign];
+        const ninthLord = planetaryPositions.find(p => p.name === ninthLordName);
+        if (!ninthLord) return false;
+        
+        const isNinthLordInGoodHouse = [1, 4, 5, 7, 9, 10].includes(ninthLord.house);
+        return isLagnaLordPowerful && isNinthLordInGoodHouse;
+      })()
     }
   ];
 
@@ -396,7 +436,30 @@ export function calculateKundali(
   const isManglik = [1, 4, 7, 8, 12].includes(marsHouse);
   const manglikSeverity = !isManglik ? 'None' : ([7, 8].includes(marsHouse) ? 'High' : 'Low');
   
-  const isKaalSarp = (d % 7) < 1.2; // 17% chance
+  const isKaalSarp = (() => {
+    const raHouse = planetaryPositions.find(p => p.name === 'Rahu')?.house || 0;
+    const keHouse = planetaryPositions.find(p => p.name === 'Ketu')?.house || 0;
+    if (!raHouse || !keHouse) return false;
+    
+    const minH = Math.min(raHouse, keHouse);
+    const maxH = Math.max(raHouse, keHouse);
+    
+    let allInRange1 = true;
+    let allInRange2 = true;
+    
+    planetaryPositions.forEach(p => {
+      if (p.name === 'Rahu' || p.name === 'Ketu') return;
+      
+      const h = p.house;
+      const inRange1 = h >= minH && h <= maxH;
+      const inRange2 = h >= maxH || h <= minH;
+      
+      if (!inRange1) allInRange1 = false;
+      if (!inRange2) allInRange2 = false;
+    });
+    
+    return allInRange1 || allInRange2;
+  })();
   
   const saturnHouse = planetaryPositions.find(p => p.name === 'Saturn')?.house || 0;
   const moonHouse = planetaryPositions.find(p => p.name === 'Moon')?.house || 0;

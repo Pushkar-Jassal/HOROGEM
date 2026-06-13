@@ -138,9 +138,15 @@ export const Matchmaking: React.FC<MatchmakingProps> = ({ lang }) => {
       return;
     }
 
-    // Calculate chart results for both
-    const coords1 = CITIES_DB.find(c => partner1.place.includes(c.name.split(',')[0])) || CITIES_DB[1];
-    const coords2 = CITIES_DB.find(c => partner2.place.includes(c.name.split(',')[0])) || CITIES_DB[0];
+    // Calculate chart results for both using exact city matching and robust fallbacks
+    const coords1 = CITIES_DB.find(c => c.name.toLowerCase() === partner1.place.toLowerCase()) ||
+                    CITIES_DB.find(c => partner1.place.toLowerCase().includes(c.name.split(',')[0].toLowerCase())) ||
+                    CITIES_DB.find(c => c.name.toLowerCase().includes(partner1.place.toLowerCase())) ||
+                    CITIES_DB[1];
+    const coords2 = CITIES_DB.find(c => c.name.toLowerCase() === partner2.place.toLowerCase()) ||
+                    CITIES_DB.find(c => partner2.place.toLowerCase().includes(c.name.split(',')[0].toLowerCase())) ||
+                    CITIES_DB.find(c => c.name.toLowerCase().includes(partner2.place.toLowerCase())) ||
+                    CITIES_DB[0];
 
     const chart1 = calculateKundali(partner1.dob, partner1.tob, partner1.place, coords1.lat, coords1.lng);
     const chart2 = calculateKundali(partner2.dob, partner2.tob, partner2.place, coords2.lat, coords2.lng);

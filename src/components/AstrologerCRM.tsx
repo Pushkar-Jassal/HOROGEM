@@ -3,6 +3,7 @@ import { calculateKundali, KundaliResult } from '../engine/astrology';
 import { User, Calendar, CreditCard, Plus, Search, FileText, Check, AlertCircle, Printer, Download, Sparkles, BookOpen } from 'lucide-react';
 import { CustomDatePicker } from './CustomDatePicker';
 import { CustomTimePicker } from './CustomTimePicker';
+import { CITIES } from '../engine/cities';
 
 interface CRMClient {
   id: string;
@@ -185,6 +186,17 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
   const [newClient, setNewClient] = useState({
     name: '', dob: '', tob: '', place: '', gender: 'Male', occupation: '', notes: ''
   });
+  const [crmPlaceSuggestions, setCrmPlaceSuggestions] = useState<typeof CITIES>([]);
+
+  const handleCrmPlaceChange = (value: string) => {
+    setNewClient(prev => ({ ...prev, place: value }));
+    if (value.trim().length > 1) {
+      const filtered = CITIES.filter(c => c.name.toLowerCase().includes(value.toLowerCase()));
+      setCrmPlaceSuggestions(filtered.slice(0, 8));
+    } else {
+      setCrmPlaceSuggestions([]);
+    }
+  };
 
   const [showAddApptForm, setShowAddApptForm] = useState(false);
   const [newAppt, setNewAppt] = useState({
@@ -230,13 +242,13 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
   }, []);
 
   const handleLoadClientDetails = (client: CRMClient) => {
-    // Determine coordinates based on place name (fallback check)
-    let lat = 28.6139;
-    let lng = 77.2090;
+    // Determine coordinates using the CITIES database
+    const foundCity = CITIES.find(c => c.name.toLowerCase() === client.place.toLowerCase()) ||
+                      CITIES.find(c => c.name.toLowerCase().includes(client.place.toLowerCase())) ||
+                      CITIES.find(c => client.place.toLowerCase().includes(c.name.split(',')[0].toLowerCase()));
 
-    if (client.place.toLowerCase().includes('mumbai')) { lat = 19.0760; lng = 72.8777; }
-    else if (client.place.toLowerCase().includes('ahmedabad')) { lat = 23.0225; lng = 72.5714; }
-    else if (client.place.toLowerCase().includes('ludhiana')) { lat = 30.9010; lng = 75.8573; }
+    const lat = foundCity ? foundCity.lat : 28.6139;
+    const lng = foundCity ? foundCity.lng : 77.2090;
 
     const res = calculateKundali(client.dob, client.tob || '12:00', client.place, lat, lng);
     
@@ -283,6 +295,14 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
       alert(lang === 'hi' ? 'कृपया आवश्यक फ़ील्ड भरें' : 'Please fill Name, Date and Place');
       return;
     }
+
+    const foundCity = CITIES.find(c => c.name.toLowerCase() === newClient.place.toLowerCase()) ||
+                      CITIES.find(c => c.name.toLowerCase().includes(newClient.place.toLowerCase())) ||
+                      CITIES.find(c => newClient.place.toLowerCase().includes(c.name.split(',')[0].toLowerCase()));
+
+    const lat = foundCity ? foundCity.lat : 28.6139;
+    const lng = foundCity ? foundCity.lng : 77.2090;
+
     const created: CRMClient = {
       id: `crm-${Date.now()}`,
       ...newClient
@@ -302,8 +322,8 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
         currentLocation: '',
         occupation: newClient.occupation,
         maritalStatus: 'Single',
-        lat: 28.6139,
-        lng: 77.2090
+        lat,
+        lng
       };
       historyList = historyList.filter((h: any) => 
         !(h.fullName.toLowerCase() === profile.fullName.toLowerCase() && h.dob === profile.dob)
@@ -563,14 +583,49 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label className="form-label">{t.fieldPlace}</label>
                   <input
                     type="text"
                     className="form-input"
                     value={newClient.place}
-                    onChange={(e) => setNewClient({ ...newClient, place: e.target.value })}
+                    onChange={(e) => handleCrmPlaceChange(e.target.value)}
                   />
+                  {crmPlaceSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      zIndex: 10,
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                    }}>
+                      {crmPlaceSuggestions.map(c => (
+                        <div
+                          key={c.name}
+                          onClick={() => {
+                            setNewClient({ ...newClient, place: c.name });
+                            setCrmPlaceSuggestions([]);
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid rgba(255,255,255,0.03)',
+                            fontSize: '0.85rem'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {c.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">

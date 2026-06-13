@@ -133,7 +133,9 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ onCalculate, lan
     let lng = selectedCoords?.lng;
 
     if (!lat || !lng) {
-      const foundCity = CITIES.find(c => c.name.toLowerCase().includes(formData.placeOfBirth.toLowerCase()));
+      const foundCity = CITIES.find(c => c.name.toLowerCase() === formData.placeOfBirth.toLowerCase()) ||
+                        CITIES.find(c => c.name.toLowerCase().includes(formData.placeOfBirth.toLowerCase())) ||
+                        CITIES.find(c => formData.placeOfBirth.toLowerCase().includes(c.name.split(',')[0].toLowerCase()));
       if (foundCity) {
         lat = foundCity.lat;
         lng = foundCity.lng;
