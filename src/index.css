@@ -528,3 +528,136 @@ select option {
     page-break-after: always;
   }
 }
+
+/* Mobile responsive menu button wrappers */
+.desktop-menu-btn-wrapper {
+  display: block;
+}
+.mobile-menu-btn {
+  display: none !important;
+}
+.mobile-logo-text {
+  display: none;
+}
+.sidebar-backdrop {
+  display: none;
+}
+
+/* Table container scroll helper */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+.table-container table {
+  min-width: 600px;
+}
+
+/* Mobile Viewports Adjustments */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
+    height: 100%;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+    width: 290px !important;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+  
+  .sidebar.collapsed {
+    transform: translateX(-100%) !important;
+  }
+  
+  .sidebar.collapsed .sidebar-content {
+    display: none !important;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 990;
+  }
+
+  .desktop-menu-btn-wrapper {
+    display: none !important;
+  }
+  
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  
+  .mobile-logo-text {
+    display: inline-block;
+  }
+
+  .app-header {
+    height: auto !important;
+    flex-direction: column !important;
+    padding: 10px 12px !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  
+  .header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .nav-tabs {
+    margin: 4px 0 0 0 !important;
+    padding: 4px 0 !important;
+    width: 100% !important;
+    gap: 2px !important;
+  }
+
+  .nav-tab-btn {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .main-content {
+    padding: 12px !important;
+  }
+
+  .glass-panel {
+    padding: 16px !important;
+  }
+
+  /* Reset grid spans for mobile viewports */
+  .grid-3 > div, .grid-2 > div, .grid-4 > div {
+    grid-column: span 1 !important;
+  }
+
+  /* Center calendar and clock dropdowns on mobile */
+  .custom-calendar-dropdown, 
+  .custom-clock-dropdown {
+    width: 290px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Compact language button */
+  .lang-btn-compact {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+  }
+}
+

@@ -529,7 +529,8 @@ export const Matchmaking: React.FC<MatchmakingProps> = ({ lang }) => {
               {t.kootasTitle}
             </h3>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+            <div className="table-container">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--accent-purple)' }}>
                   <th style={{ padding: '10px' }}>{t.koota}</th>
@@ -553,6 +554,7 @@ export const Matchmaking: React.FC<MatchmakingProps> = ({ lang }) => {
                 })}
               </tbody>
             </table>
+          </div>
           </div>
 
         </div>

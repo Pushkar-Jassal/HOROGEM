@@ -857,7 +857,8 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
               {t.ledgerDesc}
             </p>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left', marginTop: '10px' }}>
+            <div className="table-container">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left', marginTop: '10px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)', color: 'var(--accent-gold)' }}>
                   <th style={{ padding: '12px' }}>{t.colClient}</th>
@@ -902,6 +903,7 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
 
           {/* Selected Invoice Print Layout */}

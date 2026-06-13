@@ -205,7 +205,7 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('horogem_gemini_api_key') || '');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 768);
   const [clientName, setClientName] = useState('Pushkar Jassal');
   const [dob, setDob] = useState('2005-10-03');
   const [activeKundali, setActiveKundali] = useState<KundaliResult | null>(null);
@@ -230,6 +230,9 @@ function App() {
     setClientName(name);
     setDob(dateOfBirth);
     setGemstoneRecs(recommendGemstones(result));
+    if (window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
   };
 
   const handlePrint = () => {
@@ -238,14 +241,17 @@ function App() {
 
   return (
     <div className="app-layout">
+      {/* Sidebar Backdrop for Mobile */}
+      {isSidebarOpen && (
+        <div className="sidebar-backdrop no-print" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
       {/* Collapsible Left Cosmic Profile Sidebar */}
       <aside className={`sidebar no-print ${isSidebarOpen ? 'open' : 'collapsed'}`}>
         <div className="sidebar-header">
           <div className="logo-container">
             <Compass size={28} className="spin-slow" style={{ color: 'var(--accent-gold)' }} />
-            {isSidebarOpen && (
-              <span className="logo-text">HOROGEM</span>
-            )}
+            <span className="logo-text">HOROGEM</span>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
@@ -256,27 +262,66 @@ function App() {
           </button>
         </div>
 
-        {isSidebarOpen && (
-          <div className="sidebar-content">
-            <ProfileManager onCalculate={handleCalculate} lang={lang} />
-          </div>
-        )}
+        <div className="sidebar-content">
+          <ProfileManager onCalculate={handleCalculate} lang={lang} />
+        </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="main-container">
         {/* Platform Header */}
         <header className="app-header no-print">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            {!isSidebarOpen && (
+          <div className="header-top-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button 
-                onClick={() => setIsSidebarOpen(true)} 
-                className="btn-icon" 
-                style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)' }}
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                className="btn-icon mobile-menu-btn" 
+                style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px' }}
               >
                 <Menu size={20} />
               </button>
-            )}
+              <span className="logo-text mobile-logo-text">HOROGEM</span>
+            </div>
+
+            <div className="desktop-menu-btn-wrapper">
+              {!isSidebarOpen && (
+                <button 
+                  onClick={() => setIsSidebarOpen(true)} 
+                  className="btn-icon" 
+                  style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+            </div>
+
+            {/* Theme & Language Selectors */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="btn-icon theme-toggle-btn"
+                aria-label="Toggle Theme"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px' }}
+              >
+                {theme === 'dark' ? <Sun size={18} style={{ color: 'var(--accent-gold)' }} /> : <Moon size={18} style={{ color: 'var(--accent-purple)' }} />}
+              </button>
+
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="btn-icon settings-toggle-btn"
+                aria-label="Settings"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px' }}
+              >
+                <Settings size={18} style={{ color: 'var(--accent-gold)' }} />
+              </button>
+
+              <button
+                onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
+                className="btn btn-secondary lang-btn-compact"
+              >
+                {lang === 'en' ? 'हिन्दी' : 'EN'}
+              </button>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -337,40 +382,7 @@ function App() {
               <Database size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
               {t.tabDatabase}
             </button>
-
           </nav>
-
-          {/* Theme & Language Selectors */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="btn-icon theme-toggle-btn"
-              aria-label="Toggle Theme"
-              style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px' }}
-            >
-              {theme === 'dark' ? <Sun size={18} style={{ color: 'var(--accent-gold)' }} /> : <Moon size={18} style={{ color: 'var(--accent-purple)' }} />}
-            </button>
-
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="btn-icon settings-toggle-btn"
-              aria-label="Settings"
-              style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px' }}
-            >
-              <Settings size={18} style={{ color: 'var(--accent-gold)' }} />
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Globe size={16} style={{ color: 'var(--accent-gold)' }} />
-              <button
-                onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-                className="btn btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 'bold' }}
-              >
-                {lang === 'en' ? 'हिन्दी' : 'English'}
-              </button>
-            </div>
-          </div>
         </header>
 
         <main className="main-content">
@@ -551,7 +563,8 @@ function App() {
                       {t.strengthTitle}
                     </h3>
 
-                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                    <div className="table-container">
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--accent-gold)' }}>
                           <th style={{ padding: '8px' }}>{t.colPlanet}</th>
@@ -648,6 +661,7 @@ function App() {
                         })}
                       </tbody>
                     </table>
+                  </div>
                   </div>
 
                   {/* Dasha Analysis Timeline */}
