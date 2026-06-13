@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { calculateKundali, KundaliResult } from '../engine/astrology';
-import { User, Calendar, CreditCard, Plus, Search, FileText, Check, AlertCircle, Printer } from 'lucide-react';
+import { User, Calendar, CreditCard, Plus, Search, FileText, Check, AlertCircle, Printer, Download, Sparkles, BookOpen } from 'lucide-react';
+import { CustomDatePicker } from './CustomDatePicker';
+import { CustomTimePicker } from './CustomTimePicker';
 
 interface CRMClient {
   id: string;
@@ -151,71 +153,30 @@ const TRANSLATIONS = {
 };
 
 export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang }) => {
-  const [clients, setClients] = useState<CRMClient[]>([
-    {
-      id: 'c1',
-      name: 'Amit Sharma',
-      dob: '1989-05-15',
-      tob: '08:45',
-      place: 'New Delhi, Delhi, India',
-      gender: 'Male',
-      occupation: 'Tech Lead',
-      notes: 'Consulted for career delays and business stability. Saturn Sade Sati active.'
-    },
-    {
-      id: 'c2',
-      name: 'Priya Patel',
-      dob: '1995-11-23',
-      tob: '16:20',
-      place: 'Mumbai, Maharashtra, India',
-      gender: 'Female',
-      occupation: 'Designer',
-      notes: 'Interested in marriage compatibility and gemstone suitabilities. Exalted Moon.'
-    },
-    {
-      id: 'c3',
-      name: 'Rohan Mehta',
-      dob: '1992-03-08',
-      tob: '12:10',
-      place: 'Ahmedabad, Gujarat, India',
-      gender: 'Male',
-      occupation: 'Exporter',
-      notes: 'Lal Kitab remedies recommended for financial blockage. Ruby suitable.'
+  const [clients, setClients] = useState<CRMClient[]>(() => {
+    const stored = localStorage.getItem('horogem_crm_clients');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error(e);
+      }
     }
-  ]);
+    // Start from 0 (empty array)
+    return [];
+  });
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 'a1',
-      clientName: 'Amit Sharma',
-      date: '2026-06-14',
-      time: '11:00',
-      type: 'General Reading',
-      status: 'Scheduled',
-      fee: 2100,
-      paymentStatus: 'Paid'
-    },
-    {
-      id: 'a2',
-      clientName: 'Priya Patel',
-      date: '2026-06-15',
-      time: '15:30',
-      type: 'Gemstone Suitability',
-      status: 'Scheduled',
-      fee: 1500,
-      paymentStatus: 'Pending'
-    },
-    {
-      id: 'a3',
-      clientName: 'Rohan Mehta',
-      date: '2026-06-12',
-      time: '09:00',
-      type: 'Lal Kitab Remedies',
-      status: 'Completed',
-      fee: 2500,
-      paymentStatus: 'Paid'
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const stored = localStorage.getItem('horogem_crm_appointments');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error(e);
+      }
     }
-  ]);
+    return [];
+  });
 
   const [activeTab, setActiveTab] = useState<'clients' | 'appointments' | 'payments'>('clients');
   const [searchQuery, setSearchQuery] = useState('');
@@ -232,7 +193,41 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
 
   const [selectedInvoice, setSelectedInvoice] = useState<Appointment | null>(null);
 
+  // States for active client astrological dossier
+  const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
+  const [selectedClientChart, setSelectedClientChart] = useState<KundaliResult | null>(null);
+  const [recentProfiles, setRecentProfiles] = useState<any[]>([]);
+
   const t = TRANSLATIONS[lang];
+
+  // Sync clients to localStorage
+  useEffect(() => {
+    localStorage.setItem('horogem_crm_clients', JSON.stringify(clients));
+  }, [clients]);
+
+  // Sync appointments to localStorage
+  useEffect(() => {
+    localStorage.setItem('horogem_crm_appointments', JSON.stringify(appointments));
+  }, [appointments]);
+
+  // Fetch search history profiles for import/sync
+  const loadRecentProfiles = () => {
+    const stored = localStorage.getItem('horogem_profile_history');
+    if (stored) {
+      try {
+        setRecentProfiles(JSON.parse(stored));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadRecentProfiles();
+    // Set up window listener to sync if history updates elsewhere
+    window.addEventListener('storage', loadRecentProfiles);
+    return () => window.removeEventListener('storage', loadRecentProfiles);
+  }, []);
 
   const handleLoadClientDetails = (client: CRMClient) => {
     // Determine coordinates based on place name (fallback check)
@@ -243,8 +238,42 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
     else if (client.place.toLowerCase().includes('ahmedabad')) { lat = 23.0225; lng = 72.5714; }
     else if (client.place.toLowerCase().includes('ludhiana')) { lat = 30.9010; lng = 75.8573; }
 
-    const res = calculateKundali(client.dob, client.tob, client.place, lat, lng);
+    const res = calculateKundali(client.dob, client.tob || '12:00', client.place, lat, lng);
+    
+    // Save active state for CRM summary panel
+    setSelectedClient(client);
+    setSelectedClientChart(res);
+
+    // Call prop callback to load on main app tabs
     onLoadClient(res, client.name, client.dob);
+
+    // Sync to sidebar Recent Profiles history
+    try {
+      const stored = localStorage.getItem('horogem_profile_history');
+      let historyList = stored ? JSON.parse(stored) : [];
+      const profile = {
+        fullName: client.name,
+        gender: client.gender,
+        dob: client.dob,
+        tob: client.tob || '12:00',
+        placeOfBirth: client.place,
+        currentLocation: '',
+        occupation: client.occupation,
+        maritalStatus: 'Single',
+        lat,
+        lng
+      };
+      // Prevent duplicates
+      historyList = historyList.filter((h: any) => 
+        !(h.fullName.toLowerCase() === profile.fullName.toLowerCase() && h.dob === profile.dob)
+      );
+      historyList = [profile, ...historyList].slice(0, 10);
+      localStorage.setItem('horogem_profile_history', JSON.stringify(historyList));
+      loadRecentProfiles();
+    } catch (e) {
+      console.error(e);
+    }
+
     alert(`${t.successMsg} ${client.name}!`);
   };
 
@@ -255,12 +284,61 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
       return;
     }
     const created: CRMClient = {
-      id: String(Date.now()),
+      id: `crm-${Date.now()}`,
       ...newClient
     };
-    setClients([...clients, created]);
+    setClients(prev => [...prev, created]);
+
+    // Also sync to Recent Profiles in sidebar
+    try {
+      const stored = localStorage.getItem('horogem_profile_history');
+      let historyList = stored ? JSON.parse(stored) : [];
+      const profile = {
+        fullName: newClient.name,
+        gender: newClient.gender,
+        dob: newClient.dob,
+        tob: newClient.tob || '12:00',
+        placeOfBirth: newClient.place,
+        currentLocation: '',
+        occupation: newClient.occupation,
+        maritalStatus: 'Single',
+        lat: 28.6139,
+        lng: 77.2090
+      };
+      historyList = historyList.filter((h: any) => 
+        !(h.fullName.toLowerCase() === profile.fullName.toLowerCase() && h.dob === profile.dob)
+      );
+      historyList = [profile, ...historyList].slice(0, 10);
+      localStorage.setItem('horogem_profile_history', JSON.stringify(historyList));
+      loadRecentProfiles();
+    } catch (e) {
+      console.error(e);
+    }
+
     setNewClient({ name: '', dob: '', tob: '', place: '', gender: 'Male', occupation: '', notes: '' });
     setShowAddClientForm(false);
+  };
+
+  const handleImportRecentProfile = (profile: any) => {
+    // Check duplication
+    if (clients.some(c => c.name.toLowerCase() === profile.fullName.toLowerCase() && c.dob === profile.dob)) {
+      alert(lang === 'hi' ? 'यह प्रोफ़ाइल पहले से क्लाइंट सूची में है।' : 'This profile is already registered in CRM.');
+      return;
+    }
+
+    const created: CRMClient = {
+      id: `crm-${Date.now()}`,
+      name: profile.fullName,
+      dob: profile.dob,
+      tob: profile.tob || '12:00',
+      place: profile.placeOfBirth,
+      gender: profile.gender,
+      occupation: profile.occupation || 'N/A',
+      notes: `Imported from recent searches history.`
+    };
+
+    setClients(prev => [...prev, created]);
+    alert(lang === 'hi' ? 'सफलतापूर्वक आयात किया गया!' : 'Successfully imported!');
   };
 
   const handleAddAppt = (e: React.FormEvent) => {
@@ -279,7 +357,7 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
       fee: Number(newAppt.fee),
       paymentStatus: newAppt.paymentStatus
     };
-    setAppointments([...appointments, created]);
+    setAppointments(prev => [...prev, created]);
     setShowAddApptForm(false);
   };
 
@@ -343,133 +421,281 @@ export const AstrologerCRM: React.FC<AstrologerCRMProps> = ({ onLoadClient, lang
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filteredClients.map(c => (
-                <div 
-                  key={c.id}
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    transition: 'var(--transition-smooth)'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-purple)'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-                >
-                  <div style={{ flex: '1', minWidth: '200px' }}>
-                    <h4 style={{ fontSize: '1.05rem', color: '#fff' }}>{c.name}</h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {lang === 'hi' && c.gender === 'Male' ? 'पुरुष' : lang === 'hi' && c.gender === 'Female' ? 'महिला' : c.gender} • {t.dob}: {c.dob} ({c.tob}) • {c.place}
-                    </p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginTop: '4px' }}>
-                      <strong>{t.occupation}:</strong> {c.occupation || 'N/A'}
-                    </p>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px', background: 'rgba(0,0,0,0.15)', padding: '8px 12px', borderRadius: '6px' }}>
-                      <strong>{t.notes}:</strong> {c.notes}
-                    </p>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <button onClick={() => handleLoadClientDetails(c)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                      {t.loadBtn}
-                    </button>
-                  </div>
+              {filteredClients.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                  {lang === 'hi' ? 'कोई क्लाइंट उपलब्ध नहीं है।' : 'No registered clients available.'}
                 </div>
-              ))}
+              ) : (
+                filteredClients.map(c => (
+                  <div 
+                    key={c.id}
+                    style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-purple)'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                  >
+                    <div style={{ flex: '1', minWidth: '200px' }}>
+                      <h4 style={{ fontSize: '1.05rem', color: '#fff' }}>{c.name}</h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {lang === 'hi' && c.gender === 'Male' ? 'पुरुष' : lang === 'hi' && c.gender === 'Female' ? 'महिला' : c.gender} • {t.dob}: {c.dob} ({c.tob}) • {c.place}
+                      </p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginTop: '4px' }}>
+                        <strong>{t.occupation}:</strong> {c.occupation || 'N/A'}
+                      </p>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px', background: 'rgba(0,0,0,0.15)', padding: '8px 12px', borderRadius: '6px' }}>
+                        <strong>{t.notes}:</strong> {c.notes}
+                      </p>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <button onClick={() => handleLoadClientDetails(c)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+                        {t.loadBtn}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
+
+            {/* Recent search profiles importer */}
+            {recentProfiles.length > 0 && (
+              <div style={{ marginTop: '24px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                <h4 style={{ fontSize: '1.1rem', color: 'var(--accent-gold)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={16} /> {lang === 'hi' ? 'हालिया खोज इतिहास से आयात करें' : 'Import from Recent Searches'}
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                  {recentProfiles.map((p, idx) => {
+                    const isAlreadyClient = clients.some(c => c.name.toLowerCase() === p.fullName.toLowerCase() && c.dob === p.dob);
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          padding: '12px', 
+                          background: 'rgba(255,255,255,0.02)', 
+                          border: '1px solid rgba(255,255,255,0.05)', 
+                          borderRadius: '8px', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '10px', 
+                          justifyContent: 'space-between' 
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#fff' }}>{p.fullName}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.dob} • {p.placeOfBirth.split(',')[0]}</div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isAlreadyClient}
+                          onClick={() => handleImportRecentProfile(p)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', width: '100%', justifyContent: 'center' }}
+                        >
+                          {isAlreadyClient ? (lang === 'hi' ? 'पहले से मौजूद' : 'Added') : (lang === 'hi' ? 'ग्राहक सूची में जोड़ें' : 'Import Client')}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Add Form panel */}
-          <div className="glass-panel" style={{ height: 'fit-content' }}>
-            <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-purple)', marginBottom: '16px' }}>
-              {t.formTitle}
-            </h3>
+          {/* Right column: Form and Selected Client Astrological summary */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            <form onSubmit={handleAddClient} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="form-group">
-                <label className="form-label">{t.fieldName}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newClient.name}
-                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">{t.fieldDob}</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={newClient.dob}
-                  onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })}
-                />
-              </div>
-
-              <div className="grid-2">
+            {/* Add Form panel */}
+            <div className="glass-panel" style={{ height: 'fit-content' }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-purple)', marginBottom: '16px' }}>
+                {t.formTitle}
+              </h3>
+              
+              <form onSubmit={handleAddClient} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div className="form-group">
-                  <label className="form-label">{t.fieldTob}</label>
+                  <label className="form-label">{t.fieldName}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. 10:15"
-                    value={newClient.tob}
-                    onChange={(e) => setNewClient({ ...newClient, tob: e.target.value })}
+                    value={newClient.name}
+                    onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
                   />
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">{t.fieldGender}</label>
-                  <select
-                    className="form-select"
-                    value={newClient.gender}
-                    onChange={(e) => setNewClient({ ...newClient, gender: e.target.value })}
-                  >
-                    <option value="Male">{lang === 'hi' ? 'पुरुष' : 'Male'}</option>
-                    <option value="Female">{lang === 'hi' ? 'महिला' : 'Female'}</option>
-                    <option value="Other">{lang === 'hi' ? 'अन्य' : 'Other'}</option>
-                  </select>
+                  <label className="form-label">{t.fieldDob}</label>
+                  <CustomDatePicker
+                    value={newClient.dob}
+                    onChange={(val) => setNewClient({ ...newClient, dob: val })}
+                    lang={lang}
+                  />
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label className="form-label">{t.fieldPlace}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newClient.place}
-                  onChange={(e) => setNewClient({ ...newClient, place: e.target.value })}
-                />
-              </div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">{t.fieldTob}</label>
+                    <CustomTimePicker
+                      value={newClient.tob}
+                      onChange={(val) => setNewClient({ ...newClient, tob: val })}
+                      lang={lang}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t.fieldGender}</label>
+                    <select
+                      className="form-select"
+                      value={newClient.gender}
+                      onChange={(e) => setNewClient({ ...newClient, gender: e.target.value })}
+                    >
+                      <option value="Male">{lang === 'hi' ? 'पुरुष' : 'Male'}</option>
+                      <option value="Female">{lang === 'hi' ? 'महिला' : 'Female'}</option>
+                      <option value="Other">{lang === 'hi' ? 'अन्य' : 'Other'}</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">{t.fieldOcc}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newClient.occupation}
-                  onChange={(e) => setNewClient({ ...newClient, occupation: e.target.value })}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">{t.fieldPlace}</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newClient.place}
+                    onChange={(e) => setNewClient({ ...newClient, place: e.target.value })}
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">{t.fieldNotes}</label>
-                <textarea
-                  className="form-textarea"
-                  rows={2}
-                  value={newClient.notes}
-                  onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">{t.fieldOcc}</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newClient.occupation}
+                    onChange={(e) => setNewClient({ ...newClient, occupation: e.target.value })}
+                  />
+                </div>
 
-              <button type="submit" className="btn btn-primary" style={{ justifyContent: 'center' }}>
-                {t.saveBtn}
-              </button>
-            </form>
+                <div className="form-group">
+                  <label className="form-label">{t.fieldNotes}</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={2}
+                    value={newClient.notes}
+                    onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ justifyContent: 'center' }}>
+                  {t.saveBtn}
+                </button>
+              </form>
+            </div>
+
+            {/* Selected Client Astrological Summary Dossier */}
+            {selectedClient && selectedClientChart && (
+              <div className="glass-panel" style={{ borderTop: '4px solid var(--accent-gold)' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <BookOpen size={16} /> {lang === 'hi' ? `${selectedClient.name} ज्योतिष रिपोर्ट` : `Chart Summary: ${selectedClient.name}`}
+                </h3>
+
+                {/* Dasha / Mahadasha */}
+                <div style={{ background: 'var(--accent-purple-glow)', padding: '12px', borderRadius: '8px', border: '1px solid var(--accent-purple)', marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '0.85rem', color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={14} style={{ color: 'var(--accent-gold)' }} />
+                    {lang === 'hi' ? 'सक्रिय विंशोत्तरी महादशा' : 'Active Dasha Period'}
+                  </h4>
+                  {(() => {
+                    const now = new Date();
+                    const activeDasha = selectedClientChart.dashas.find((d: any) => {
+                      return new Date(d.start) <= now && new Date(d.end) >= now;
+                    }) || selectedClientChart.dashas[0];
+                    
+                    const activeSub = activeDasha?.subDashas?.find((s: any) => {
+                      return s.start <= now && s.end >= now;
+                    });
+
+                    return (
+                      <div style={{ fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--accent-gold)', fontSize: '0.95rem' }}>
+                          {activeDasha.lord} Dasha
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
+                          Period: {new Date(activeDasha.start).getFullYear()} - {new Date(activeDasha.end).getFullYear()}
+                        </div>
+                        {activeSub && (
+                          <div style={{ marginTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+                            <strong>Antardasha:</strong> {activeSub.lord} (until {new Date(activeSub.end).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })})
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Yogas tab list */}
+                <div style={{ marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-teal)', marginBottom: '8px', borderBottom: '1px solid rgba(26,188,156,0.15)', paddingBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={14} /> {lang === 'hi' ? 'सक्रिय कुंडली योग' : 'Active Chart Yogas'}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {selectedClientChart.yogas.filter(y => y.active).length === 0 ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {lang === 'hi' ? 'कोई सक्रिय योग नहीं मिला।' : 'No active yogas detected.'}
+                      </div>
+                    ) : (
+                      selectedClientChart.yogas.filter(y => y.active).map((y, idx) => (
+                        <div key={idx} style={{ fontSize: '0.8rem', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', borderLeft: '2px solid var(--accent-teal)' }}>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{y.name}</span>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem', marginTop: '2px' }}>{y.description}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Chronological vimshottari timeline */}
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', color: '#fff', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                    {lang === 'hi' ? 'विंशोत्तरी दशा अनुक्रम' : 'Vimshottari Chronology'}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {selectedClientChart.dashas.map((d, idx) => {
+                      const isCurrent = new Date(d.start) <= new Date() && new Date(d.end) >= new Date();
+                      return (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            fontSize: '0.75rem', 
+                            padding: '4px 8px', 
+                            background: isCurrent ? 'rgba(243,156,18,0.1)' : 'transparent', 
+                            borderRadius: '4px',
+                            border: isCurrent ? '1px solid rgba(243,156,18,0.2)' : 'none'
+                          }}
+                        >
+                          <span style={{ fontWeight: isCurrent ? 'bold' : 'normal', color: isCurrent ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>
+                            {d.lord} Mahadasha
+                          </span>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {new Date(d.start).getFullYear()} - {new Date(d.end).getFullYear()}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
         </div>
       )}

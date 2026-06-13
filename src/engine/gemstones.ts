@@ -13,15 +13,19 @@ export interface Gemstone {
   benefits: string[];
   sideEffects: string[];
   wearingMethod: string;
+  alternatives?: string[];
+  alternativesHi?: string[];
+  basePricePerRatti?: number;
 }
 
 export interface RecommendationOutput {
-  primary: Gemstone;
-  primaryReason: string;
-  secondary?: Gemstone;
-  secondaryReason: string;
-  tertiary?: Gemstone;
-  tertiaryReason: string;
+  lifeStone: Gemstone;
+  lifeStoneReason: string;
+  luckyStone: Gemstone;
+  luckyStoneReason: string;
+  workStone: Gemstone;
+  workStoneReason: string;
+  otherStones: { stone: Gemstone; reason: string }[];
   avoid: { stone: Gemstone; reason: string }[];
 }
 
@@ -45,7 +49,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Can cause mild arrogance or short temper if unsuitable.',
       'May lead to increased body heat or insomnia.'
     ],
-    wearingMethod: 'Wash the ring in Ganga water or unboiled milk on Sunday morning. Perform prayers, chant the Sun Mantra 108 times, and wear the ring on the ring finger of your right hand.'
+    wearingMethod: 'Wash the ring in Ganga water or unboiled milk on Sunday morning. Perform prayers, chant the Sun Mantra 108 times, and wear the ring on the ring finger of your right hand.',
+    alternatives: ['Red Garnet', 'Red Spinel', 'Rubellite'],
+    alternativesHi: ['लाल गार्नेट', 'लाल स्पिनल', 'रूबेलाइट'],
+    basePricePerRatti: 2500
   },
   Moon: {
     name: 'Pearl',
@@ -66,7 +73,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'May cause excessive emotional sensitivity or cold/cough if unsuitable.',
       'Can lead to lethargy or mood swings.'
     ],
-    wearingMethod: 'Purify the pearl ring with raw milk and honey on Monday morning. Recite the Moon Mantra 108 times and wear it on the little finger of the working hand.'
+    wearingMethod: 'Purify the pearl ring with raw milk and honey on Monday morning. Recite the Moon Mantra 108 times and wear it on the little finger of the working hand.',
+    alternatives: ['Moonstone', 'White Agate'],
+    alternativesHi: ['चन्द्रकान्त मणि (मूनस्टोन)', 'सफेद अकीक'],
+    basePricePerRatti: 800
   },
   Mars: {
     name: 'Red Coral',
@@ -87,7 +97,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Can trigger aggression, arguments, and relationship friction.',
       'Might lead to high blood pressure or accident-prone states.'
     ],
-    wearingMethod: 'Soak the coral ring in unboiled milk and holy water. On Tuesday morning after sunrise, recite the Mars Mantra 108 times and wear it on the ring finger.'
+    wearingMethod: 'Soak the coral ring in unboiled milk and holy water. On Tuesday morning after sunrise, recite the Mars Mantra 108 times and wear it on the ring finger.',
+    alternatives: ['Red Jasper', 'Carnelian'],
+    alternativesHi: ['लाल जैस्पर', 'कार्नेलियन'],
+    basePricePerRatti: 1200
   },
   Mercury: {
     name: 'Emerald',
@@ -108,7 +121,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Could cause distraction, stammering, or skin allergies if incompatible.',
       'May lead to anxiety and overthinking.'
     ],
-    wearingMethod: 'Wash the emerald ring in unboiled milk, then rinse in fresh water. On Wednesday morning, chant the Mercury Mantra 108 times and wear it on the little finger.'
+    wearingMethod: 'Wash the emerald ring in unboiled milk, then rinse in fresh water. On Wednesday morning, chant the Mercury Mantra 108 times and wear it on the little finger.',
+    alternatives: ['Green Tourmaline', 'Peridot', 'Green Onyx'],
+    alternativesHi: ['हरा तुरमली', 'पेरिडॉट', 'हरा ओनिक्स'],
+    basePricePerRatti: 3500
   },
   Jupiter: {
     name: 'Yellow Sapphire',
@@ -129,7 +145,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Might cause weight gain, laziness, or over-optimism if unsuitable.',
       'Can occasionally trigger liver-heat.'
     ],
-    wearingMethod: 'Soak the ring in unboiled milk or honey on Thursday morning. Pray to Lord Jupiter, chant the Guru Mantra 108 times, and wear it on the index finger.'
+    wearingMethod: 'Soak the ring in unboiled milk or honey on Thursday morning. Pray to Lord Jupiter, chant the Guru Mantra 108 times, and wear it on the index finger.',
+    alternatives: ['Yellow Topaz', 'Citrine', 'Yellow Tourmaline'],
+    alternativesHi: ['पीला टोपाज', 'सुनहला (सिट्रीन)', 'पीला तुरमली'],
+    basePricePerRatti: 4500
   },
   Venus: {
     name: 'Diamond / White Sapphire',
@@ -150,7 +169,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Can lead to extravagance, relation scandals, or reproductive issues if unsuitable.',
       'May cause sudden financial loss due to speculation.'
     ],
-    wearingMethod: 'Purify the diamond/white sapphire ring on Friday morning with unboiled milk. Recite the Venus Mantra 108 times and wear it on the middle finger of the right hand.'
+    wearingMethod: 'Purify the diamond/white sapphire ring on Friday morning with unboiled milk. Recite the Venus Mantra 108 times and wear it on the middle finger of the right hand.',
+    alternatives: ['White Zircon', 'Opal', 'White Topaz'],
+    alternativesHi: ['सफेद जरकन', 'ओपल', 'सफेद टोपाज'],
+    basePricePerRatti: 8000
   },
   Saturn: {
     name: 'Blue Sapphire',
@@ -171,7 +193,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Highly volatile; if unsuitable, can cause immediate losses, accidents, or depression.',
       'May cause nightmares or relationship strain within 72 hours.'
     ],
-    wearingMethod: 'Test the stone under your pillow for 3 nights first. If no bad dreams occur, wash the ring in milk and water, chant the Saturn Mantra 108 times on Saturday morning, and wear it on the middle finger.'
+    wearingMethod: 'Test the stone under your pillow for 3 nights first. If no bad dreams occur, wash the ring in milk and water, chant the Saturn Mantra 108 times on Saturday morning, and wear it on the middle finger.',
+    alternatives: ['Neeli (Iolite)', 'Amethyst', 'Blue Spinel', 'Tiger Eye'],
+    alternativesHi: ['नीली (आयलाइट)', 'कटेला (एमेथिस्ट)', 'नीला स्पिनल', 'टाइगर आई'],
+    basePricePerRatti: 5500
   },
   Rahu: {
     name: 'Hessonite',
@@ -192,7 +217,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Can cause skin allergies, legal issues, or hallucinations if unsuitable.',
       'May lead to chaotic thoughts and sleep issues.'
     ],
-    wearingMethod: 'Wash the Hessonite ring in unboiled milk. On Saturday evening (sunset), chant the Rahu Mantra 108 times and wear the ring on the middle finger.'
+    wearingMethod: 'Wash the Hessonite ring in unboiled milk. On Saturday evening (sunset), chant the Rahu Mantra 108 times and wear the ring on the middle finger.',
+    alternatives: ['Orange Zircon', 'Spessartite Garnet'],
+    alternativesHi: ['नारंगी जरकन', 'स्पैसर्टाइट गारनेट'],
+    basePricePerRatti: 1000
   },
   Ketu: {
     name: 'Cat\'s Eye',
@@ -213,7 +241,10 @@ export const GEMSTONE_DB: { [key: string]: Gemstone } = {
       'Can cause high stress, skin rashes, or loss of concentration if incompatible.',
       'Might trigger isolationist tendencies.'
     ],
-    wearingMethod: 'Purify the Cat\'s eye ring in milk and water. On Tuesday evening or night, chant the Ketu Mantra 108 times and wear it on the middle finger.'
+    wearingMethod: 'Purify the Cat\'s eye ring in milk and water. On Tuesday evening or night, chant the Ketu Mantra 108 times and wear it on the middle finger.',
+    alternatives: ['Tiger Eye', 'Cat\'s Eye Quartz', 'Turquoise'],
+    alternativesHi: ['टाइगर आई', 'कैट्स आई क्वार्ट्ज', 'फिरोजा'],
+    basePricePerRatti: 1100
   }
 };
 
@@ -250,8 +281,8 @@ const LAGNA_RULES: { [key: string]: LagnaRule } = {
     neutrals: ['Sun']
   },
   Leo: {
-    benefics: ['Sun', 'Mars'],
-    yogakaraka: 'Jupiter', // Technically Mars is Yogakaraka too, but Ju/Ma both highly benefic
+    benefics: ['Sun', 'Jupiter'],
+    yogakaraka: 'Mars',
     malefics: ['Mercury', 'Venus', 'Saturn'],
     neutrals: ['Moon']
   },
@@ -267,8 +298,7 @@ const LAGNA_RULES: { [key: string]: LagnaRule } = {
     neutrals: ['Moon']
   },
   Scorpio: {
-    benefics: ['Mars', 'Sun', 'Moon'],
-    yogakaraka: 'Jupiter',
+    benefics: ['Mars', 'Sun', 'Moon', 'Jupiter'],
     malefics: ['Mercury', 'Venus'],
     neutrals: ['Saturn']
   },
@@ -284,7 +314,8 @@ const LAGNA_RULES: { [key: string]: LagnaRule } = {
     neutrals: ['Sun']
   },
   Aquarius: {
-    benefics: ['Saturn', 'Venus'],
+    benefics: ['Saturn'],
+    yogakaraka: 'Venus',
     malefics: ['Jupiter', 'Moon', 'Mars'],
     neutrals: ['Sun', 'Mercury']
   },
@@ -305,18 +336,14 @@ export function recommendGemstones(kundali: KundaliResult): RecommendationOutput
   const avoidList: { stone: Gemstone; reason: string }[] = [];
   const candidateBenefics: { planet: string; score: number; reason: string }[] = [];
 
-  // --- Step 1 & 2: Identify Strong/Weak Benefic Planets ---
-  // Lagna Lord is always a candidate
-  const lagnaLordMap: { [key: string]: string } = {
-    Aries: 'Mars', Taurus: 'Venus', Gemini: 'Mercury', Cancer: 'Moon', Leo: 'Sun', Virgo: 'Mercury',
-    Libra: 'Venus', Scorpio: 'Mars', Sagittarius: 'Jupiter', Capricorn: 'Saturn', Aquarius: 'Saturn', Pisces: 'Jupiter'
-  };
-  const lagnaLord = lagnaLordMap[lagna];
-  const lagnaLordData = planetsMap.get(lagnaLord);
+  const SIGN_RULERS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+  const lagnaLord = SIGN_RULERS[kundali.lagnaIndex];
+  const luckyPlanet = SIGN_RULERS[(kundali.lagnaIndex + 8) % 12];
+  const workPlanet = SIGN_RULERS[(kundali.lagnaIndex + 9) % 12];
 
   // Analyze each planet
   planetsMap.forEach((pData, pName) => {
-    // Rahu and Ketu are generally recommended with extreme caution, and usually avoided unless running Dasha
+    // Rahu and Ketu are shadow planet remedies and generally avoided unless running Dasha
     if (pName === 'Rahu' || pName === 'Ketu') {
       avoidList.push({
         stone: GEMSTONE_DB[pName],
@@ -326,29 +353,37 @@ export function recommendGemstones(kundali: KundaliResult): RecommendationOutput
     }
 
     const isYogakaraka = rules.yogakaraka === pName;
-    const isBenefic = rules.benefics.includes(pName) || pName === lagnaLord;
+    const isBenefic = rules.benefics.includes(pName) || pName === lagnaLord || isYogakaraka;
     const isMalefic = rules.malefics.includes(pName);
 
-    // Gemstones to Avoid (Malefics or placed in 6, 8, 12 houses)
+    const isExalted = (pName === 'Sun' && pData.signIndex === 0) ||
+                      (pName === 'Moon' && pData.signIndex === 1) ||
+                      (pName === 'Mars' && pData.signIndex === 9) ||
+                      (pName === 'Mercury' && pData.signIndex === 5) ||
+                      (pName === 'Jupiter' && pData.signIndex === 3) ||
+                      (pName === 'Venus' && pData.signIndex === 11) ||
+                      (pName === 'Saturn' && pData.signIndex === 6);
+
+    const isOwnSign = (pName === 'Sun' && pData.signIndex === 4) ||
+                      (pName === 'Moon' && pData.signIndex === 3) ||
+                      (pName === 'Mars' && [0, 7].includes(pData.signIndex)) ||
+                      (pName === 'Mercury' && [2, 5].includes(pData.signIndex)) ||
+                      (pName === 'Jupiter' && [8, 11].includes(pData.signIndex)) ||
+                      (pName === 'Venus' && [1, 6].includes(pData.signIndex)) ||
+                      (pName === 'Saturn' && [9, 10].includes(pData.signIndex));
+
+    // Gemstones to Avoid (Malefics or placed in 6, 8, 12 houses unless exalted/own sign)
     if (isMalefic) {
       avoidList.push({
         stone: GEMSTONE_DB[pName],
         reason: `${pName} is a Functional Malefic (destructive lord) for ${lagna} Ascendant. Wearing its gemstone can amplify negative traits.`
       });
-    } else if (pData.house === 6 || pData.house === 8 || pData.house === 12) {
-      // Benefic planet placed in Trik/Dusthana houses (6th, 8th, 12th) - gemstone should be avoided or worn with extreme caution,
-      // as it might strengthen the negative houses.
+    } else if ((pData.house === 6 || pData.house === 8 || pData.house === 12) && !(isExalted || isOwnSign)) {
       avoidList.push({
         stone: GEMSTONE_DB[pName],
         reason: `Although ${pName} is beneficial, it is placed in the negative ${pData.house}th house. Wearing its gemstone is not recommended.`
       });
     } else if (isBenefic) {
-      // Score calculation:
-      // Yogakaraka gets boost.
-      // Lagna Lord gets boost.
-      // Weaker planets (strength < 50) are ranked higher as they need support (Step 2 of algorithm: Identify weak but beneficial planets).
-      // Extremely weak planets (strength < 25) might be too weak, but are excellent candidates for gemstones.
-      // Strong planets (strength > 75) already give good results, but wearing a gemstone amplifies them further.
       let score = 50;
       let reason = '';
 
@@ -360,9 +395,13 @@ export function recommendGemstones(kundali: KundaliResult): RecommendationOutput
         score += 25;
         reason += `Lagna Lord (Ascendant Ruler). `;
       }
+      if (isExalted || isOwnSign) {
+        score += 15;
+        reason += `${pName} is exalted or in its own sign (dignified placement). `;
+      }
 
       if (pData.strength < 50) {
-        score += 20; // Strengthing required!
+        score += 20; // Strengthening required!
         reason += `Needs strength (Planetary strength is low at ${pData.strength}%). `;
       } else {
         score += 5;
@@ -373,33 +412,80 @@ export function recommendGemstones(kundali: KundaliResult): RecommendationOutput
     }
   });
 
-  // Sort candidates by score descending
   candidateBenefics.sort((a, b) => b.score - a.score);
 
-  // Select Primary, Secondary, Tertiary
-  const primaryPlanet = candidateBenefics[0]?.planet || 'Jupiter';
-  const primaryReason = candidateBenefics[0]?.reason || 'Strong Jupiter influence';
+  const lagnaLordData = planetsMap.get(lagnaLord)!;
+  const luckyPlanetData = planetsMap.get(luckyPlanet)!;
+  const workPlanetData = planetsMap.get(workPlanet)!;
 
-  const secondaryPlanet = candidateBenefics[1]?.planet || 'Mercury';
-  const secondaryReason = candidateBenefics[1]?.reason || 'Supports Mercury';
+  const getReason = (role: 'life' | 'lucky' | 'work', pName: string, pData: PlanetPosition) => {
+    const isExalted = (pName === 'Sun' && pData.signIndex === 0) ||
+                      (pName === 'Moon' && pData.signIndex === 1) ||
+                      (pName === 'Mars' && pData.signIndex === 9) ||
+                      (pName === 'Mercury' && pData.signIndex === 5) ||
+                      (pName === 'Jupiter' && pData.signIndex === 3) ||
+                      (pName === 'Venus' && pData.signIndex === 11) ||
+                      (pName === 'Saturn' && pData.signIndex === 6);
 
-  const tertiaryPlanet = candidateBenefics[2]?.planet || 'Moon';
-  const tertiaryReason = candidateBenefics[2]?.reason || 'Enhances Moon';
+    const isOwnSign = (pName === 'Sun' && pData.signIndex === 4) ||
+                      (pName === 'Moon' && pData.signIndex === 3) ||
+                      (pName === 'Mars' && [0, 7].includes(pData.signIndex)) ||
+                      (pName === 'Mercury' && [2, 5].includes(pData.signIndex)) ||
+                      (pName === 'Jupiter' && [8, 11].includes(pData.signIndex)) ||
+                      (pName === 'Venus' && [1, 6].includes(pData.signIndex)) ||
+                      (pName === 'Saturn' && [9, 10].includes(pData.signIndex));
 
-  // Make sure we don't have overlapping avoid list items with the recommended list
+    let caution = '';
+    if (pData.house === 6 || pData.house === 8 || pData.house === 12) {
+      if (isExalted || isOwnSign) {
+        caution = ` Note: Planet is in the ${pData.house}th house, but since it is exalted or in its own sign, it forms protective aspects (dignified placement).`;
+      } else {
+        caution = ` WARNING: Planet is placed in the negative ${pData.house}th house (dusthana). Wear only under expert supervision.`;
+      }
+    }
+
+    if (role === 'life') {
+      return `Lagnesh / Ascendant Lord planet. Represents self, health, physical constitution, and longevity.${caution}`;
+    } else if (role === 'lucky') {
+      return `Bhagyesh / 9th Lord planet. Controls luck, destiny, higher education, father, and fortune.${caution}`;
+    } else {
+      return `Karmesh / 10th Lord planet. Rulers career, profession, fame, status, and worldly deeds.${caution}`;
+    }
+  };
+
+  const lifeStone = GEMSTONE_DB[lagnaLord];
+  const luckyStone = GEMSTONE_DB[luckyPlanet];
+  const workStone = GEMSTONE_DB[workPlanet];
+
+  const lifeStoneReason = getReason('life', lagnaLord, lagnaLordData);
+  const luckyStoneReason = getReason('lucky', luckyPlanet, luckyPlanetData);
+  const workStoneReason = getReason('work', workPlanet, workPlanetData);
+
+  const otherStones: { stone: Gemstone; reason: string }[] = [];
+  candidateBenefics.forEach(cb => {
+    if (cb.planet !== lagnaLord && cb.planet !== luckyPlanet && cb.planet !== workPlanet) {
+      otherStones.push({
+        stone: GEMSTONE_DB[cb.planet],
+        reason: cb.reason
+      });
+    }
+  });
+
   const filteredAvoidList = avoidList.filter(item => 
-    item.stone.planet !== primaryPlanet &&
-    item.stone.planet !== secondaryPlanet &&
-    item.stone.planet !== tertiaryPlanet
+    item.stone.planet !== lagnaLord &&
+    item.stone.planet !== luckyPlanet &&
+    item.stone.planet !== workPlanet &&
+    !otherStones.find(os => os.stone.planet === item.stone.planet)
   );
 
   return {
-    primary: GEMSTONE_DB[primaryPlanet],
-    primaryReason,
-    secondary: GEMSTONE_DB[secondaryPlanet],
-    secondaryReason,
-    tertiary: GEMSTONE_DB[tertiaryPlanet],
-    tertiaryReason,
+    lifeStone,
+    lifeStoneReason,
+    luckyStone,
+    luckyStoneReason,
+    workStone,
+    workStoneReason,
+    otherStones,
     avoid: filteredAvoidList
   };
 }

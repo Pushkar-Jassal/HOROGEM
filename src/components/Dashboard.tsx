@@ -62,6 +62,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
   const [editingGem, setEditingGem] = useState<string | null>(null);
   const [editedMetal, setEditedMetal] = useState('');
   const [editedWeight, setEditedWeight] = useState('');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('horogem_gemini_api_key') || '');
 
   const t = TRANSLATIONS[lang];
 
@@ -137,18 +138,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
               <line x1="40" y1="170" x2="480" y2="170" stroke="rgba(255,255,255,0.1)" />
 
               <path
-                d="M 40,170 Q 120,130 200,100 T 360,60 T 480,40 L 480,170 Z"
+                d="M 40,170 L 120,135 L 200,100 L 280,80 L 360,60 L 440,48 L 440,170 Z"
                 fill="rgba(142, 68, 173, 0.15)"
                 stroke="none"
               />
 
               <path
-                d="M 40,170 Q 120,130 200,100 T 360,60 T 480,40"
+                d="M 40,170 L 120,135 L 200,100 L 280,80 L 360,60 L 440,48"
                 fill="none"
                 stroke="var(--accent-purple)"
                 strokeWidth="3"
               />
 
+              <circle cx="40" cy="170" r="4" fill="var(--accent-gold)" />
               <circle cx="120" cy="135" r="4" fill="var(--accent-gold)" />
               <circle cx="200" cy="100" r="4" fill="var(--accent-gold)" />
               <circle cx="280" cy="80" r="4" fill="var(--accent-gold)" />
@@ -267,6 +269,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
           </tbody>
         </table>
       </div>
+
+      {/* Gemini API Key Configuration Section */}
+      <div className="glass-panel" style={{ borderTop: '4px solid var(--accent-gold)' }}>
+        <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Settings size={18} /> {lang === 'hi' ? 'लाइव एआई खोज विन्यास (Gemini API Configuration)' : 'Live AI Search Configuration (Gemini)'}
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '450px' }}>
+          <label className="form-label" style={{ fontWeight: '600' }}>
+            {lang === 'hi' ? 'अपनी Gemini API Key दर्ज करें:' : 'Your Gemini API Key:'}
+          </label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="password"
+              className="form-input"
+              style={{ flexGrow: 1 }}
+              placeholder={lang === 'hi' ? 'Gemini API Key दर्ज करें...' : 'Enter Gemini API Key...'}
+              value={apiKey}
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                localStorage.setItem('horogem_gemini_api_key', e.target.value);
+              }}
+            />
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
+            {lang === 'hi'
+              ? '✦ यह एपीआई कुंजी चैटबॉट (AI Assistant) में सामान्य ज्योतिषीय प्रश्नों के लिए लाइव एआई फॉलबैक सर्च को सक्षम करती है।'
+              : '✦ Setting your API key here enables live fallback AI search in the Chatbot assistant for questions not matched by local rules.'}
+          </p>
+        </div>
+      </div>
+
     </div>
   );
 };

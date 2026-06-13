@@ -9,6 +9,10 @@ export interface PlanetPosition {
   house: number;     // 1 to 12
   isRetrograde: boolean;
   strength: number;  // 0 to 100
+  isCombust: boolean;
+  isExalted: boolean;
+  isDebilitated: boolean;
+  isVargottama: boolean;
 }
 
 export interface ChartData {
@@ -26,6 +30,7 @@ export interface DashaPeriod {
 export interface KundaliResult {
   lagna: string;
   lagnaIndex: number;
+  lagnaDegree: number;
   rashi: string;
   rashiIndex: number;
   nakshatra: string;
@@ -140,10 +145,21 @@ export function calculateKundali(
     { name: 'Ketu', symbol: 'Ke', a: 1.0 }  // Shadow planet
   ];
 
-  // Geocentric Moon
-  const L_Moon = 218.316 + 13.176396 * d;
-  const M_Moon = 134.963 + 13.064993 * d;
-  const lambda_Moon = (L_Moon + 6.289 * Math.sin(M_Moon * Math.PI / 180) + 360) % 360;
+  // Geocentric Moon with Keplerian perturbations
+  const rad = Math.PI / 180;
+  const L_Moon = (218.316 + 13.176396 * d) % 360;
+  const M_Moon = (134.963 + 13.064993 * d) % 360;
+  const M_Sun = (357.529 + 0.985600 * d) % 360;
+  const L_Sun = (280.460 + 0.985647 * d) % 360;
+  const D_Elong = (L_Moon - L_Sun + 360) % 360;
+
+  const eqCenter = 6.289 * Math.sin(M_Moon * rad);
+  const evection = 1.274 * Math.sin((2 * D_Elong - M_Moon) * rad);
+  const variation = 0.658 * Math.sin((2 * D_Elong) * rad);
+  const annualEq = -0.186 * Math.sin(M_Sun * rad);
+  const parallactic = -0.114 * Math.sin(D_Elong * rad);
+
+  const lambda_Moon = (L_Moon + eqCenter + evection + variation + annualEq + parallactic + 360) % 360;
 
   // Rahu (Mean Node)
   const lambda_Rahu = (125.0445 - 0.052953 * d + 360) % 360;
@@ -213,6 +229,44 @@ export function calculateKundali(
     else if (p.name === 'Venus') strength = signIndex === 11 ? 95 : (signIndex === 5 ? 20 : 55); // exalted in Pisces
     else if (p.name === 'Saturn') strength = signIndex === 6 ? 96 : (signIndex === 0 ? 20 : 45); // exalted in Libra
 
+    // Exaltation & Debilitation checks
+    const isExalted = (p.name === 'Sun' && signIndex === 0) ||
+                      (p.name === 'Moon' && signIndex === 1) ||
+                      (p.name === 'Mars' && signIndex === 9) ||
+                      (p.name === 'Mercury' && signIndex === 5) ||
+                      (p.name === 'Jupiter' && signIndex === 3) ||
+                      (p.name === 'Venus' && signIndex === 11) ||
+                      (p.name === 'Saturn' && signIndex === 6);
+
+    const isDebilitated = (p.name === 'Sun' && signIndex === 6) ||
+                          (p.name === 'Moon' && signIndex === 7) ||
+                          (p.name === 'Mars' && signIndex === 3) ||
+                          (p.name === 'Mercury' && signIndex === 11) ||
+                          (p.name === 'Jupiter' && signIndex === 9) ||
+                          (p.name === 'Venus' && signIndex === 5) ||
+                          (p.name === 'Saturn' && signIndex === 0);
+
+    // Vargottama check (same sign in D1 and D9)
+    const navDivision = Math.floor(degree / 3.33333);
+    const element = signIndex % 4; // 0=Fire, 1=Earth, 2=Air, 3=Water
+    const startSign = element === 0 ? 0 : (element === 1 ? 9 : (element === 2 ? 6 : 3));
+    const d9SignIdx = (startSign + navDivision) % 12;
+    const isVargottama = signIndex === d9SignIdx;
+
+    // Combustion (Ast) check against Sun
+    const diff = Math.abs(tropicalLong - lambda_S);
+    const normDiff = diff > 180 ? 360 - diff : diff;
+
+    let isComb = false;
+    if (p.name !== 'Sun' && p.name !== 'Rahu' && p.name !== 'Ketu') {
+      if (p.name === 'Moon') isComb = normDiff < 12;
+      else if (p.name === 'Mars') isComb = normDiff < 17;
+      else if (p.name === 'Mercury') isComb = isRetro ? normDiff < 12 : normDiff < 14;
+      else if (p.name === 'Jupiter') isComb = normDiff < 11;
+      else if (p.name === 'Venus') isComb = isRetro ? normDiff < 8 : normDiff < 10;
+      else if (p.name === 'Saturn') isComb = normDiff < 15;
+    }
+
     return {
       name: p.name,
       symbol: p.symbol,
@@ -221,7 +275,11 @@ export function calculateKundali(
       degree: parseFloat(degree.toFixed(2)),
       house,
       isRetrograde: isRetro,
-      strength
+      strength,
+      isCombust: isComb,
+      isExalted,
+      isDebilitated,
+      isVargottama
     };
   });
 
@@ -236,21 +294,23 @@ export function calculateKundali(
   const nakshatraPercentElapsed = (totalMoonSiderealDegrees % 13.33333) / 13.33333;
 
   // --- 7. Divisional Chart generation (D1, D9, D10, Chandra) ---
-  const makeChart = (chartLagnaIndex: number, placements: { symbol: string, signIdx: number }[]): ChartData => {
+  const makeChart = (chartLagnaIndex: number, placements: { symbol: string, signIdx: number, degree: number }[]): ChartData => {
     const houses: { [key: number]: string[] } = {};
     const signs: { [key: number]: number } = {};
     for (let h = 1; h <= 12; h++) {
       houses[h] = [];
       signs[h] = (chartLagnaIndex + h - 1) % 12;
     }
-    placements.forEach(p => {
+    // Sort placements in ascending order of degree
+    const sortedPlacements = [...placements].sort((a, b) => a.degree - b.degree);
+    sortedPlacements.forEach(p => {
       const houseNum = ((p.signIdx - chartLagnaIndex + 12) % 12) + 1;
       houses[houseNum].push(p.symbol);
     });
     return { houses, signs };
   };
 
-  const d1Placements = planetaryPositions.map(p => ({ symbol: p.symbol, signIdx: p.signIndex }));
+  const d1Placements = planetaryPositions.map(p => ({ symbol: p.symbol, signIdx: p.signIndex, degree: p.degree }));
   const d1Chart = makeChart(lagnaIndex, d1Placements);
 
   // D9 (Navamsa)
@@ -259,7 +319,7 @@ export function calculateKundali(
     const element = p.signIndex % 4; // 0=Fire, 1=Earth, 2=Air, 3=Water
     const startSign = element === 0 ? 0 : (element === 1 ? 9 : (element === 2 ? 6 : 3));
     const d9SignIdx = (startSign + navDivision) % 12;
-    return { symbol: p.symbol, signIdx: d9SignIdx };
+    return { symbol: p.symbol, signIdx: d9SignIdx, degree: p.degree };
   });
   const lagnaDegreeInSign = lagnaDegrees % 30;
   const lagnaNavDivision = Math.floor(lagnaDegreeInSign / 3.3333);
@@ -274,7 +334,7 @@ export function calculateKundali(
     const isOdd = p.signIndex % 2 === 0;
     const startSign = isOdd ? p.signIndex : (p.signIndex + 8) % 12;
     const d10SignIdx = (startSign + division) % 12;
-    return { symbol: p.symbol, signIdx: d10SignIdx };
+    return { symbol: p.symbol, signIdx: d10SignIdx, degree: p.degree };
   });
   const lagnaD10Division = Math.floor(lagnaDegreeInSign / 3.0);
   const lagnaIsOdd = lagnaIndex % 2 === 0;
@@ -416,6 +476,7 @@ export function calculateKundali(
   return {
     lagna: SIGNS[lagnaIndex],
     lagnaIndex,
+    lagnaDegree: parseFloat((lagnaDegrees % 30).toFixed(2)),
     rashi: SIGNS[rashiIndex],
     rashiIndex,
     nakshatra: nakshatra.name,
